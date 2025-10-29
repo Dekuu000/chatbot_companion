@@ -46,13 +46,13 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Project Status
 
-🚧 **In Development** - Phase 0 Complete
+🚧 **In Development** - Phases 0-2 Complete
 
 ## Development Phases
 
 - [x] Phase 0: Development Environment Setup
-- [ ] Phase 1: Architecture & Schema Design
-- [ ] Phase 2: Database Setup
+- [x] Phase 1: Architecture & Schema Design
+- [x] Phase 2: Database Setup
 - [ ] Phase 3: Authentication
 - [ ] Phase 4: AI Chatbot Feature
 - [ ] Phase 5: Personalized Career Suggestions
