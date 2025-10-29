@@ -3,32 +3,13 @@
  */
 
 import Link from 'next/link'
-import { HiSparkles, HiChatBubbleLeftRight, HiDocumentText, HiUserCircle } from 'react-icons/hi2'
+import { HiChatBubbleLeftRight, HiDocumentText, HiUserCircle } from 'react-icons/hi2'
+import Navbar from '@/components/Navbar'
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Navigation */}
-      <nav className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <HiSparkles className="h-8 w-8 text-indigo-600" />
-              <span className="ml-2 text-xl font-bold text-gray-900 dark:text-white">
-                Chatbot Companion
-              </span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link href="/profile" className="text-gray-700 dark:text-gray-300 hover:text-indigo-600">
-                Profile
-              </Link>
-              <Link href="/chat" className="text-gray-700 dark:text-gray-300 hover:text-indigo-600">
-                Chat
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* Hero Section */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

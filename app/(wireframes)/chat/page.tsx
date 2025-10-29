@@ -6,8 +6,8 @@
 'use client'
 
 import { useState } from 'react'
-import { HiArrowUp, HiSparkles, HiMenu } from 'react-icons/hi2'
-import Link from 'next/link'
+import { HiArrowUp, HiSparkles } from 'react-icons/hi2'
+import Navbar from '@/components/Navbar'
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([])
@@ -35,22 +35,7 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link href="/" className="flex items-center">
-              <HiSparkles className="h-6 w-6 text-indigo-600" />
-              <span className="ml-2 font-semibold text-gray-900 dark:text-white">
-                CareerGuideGPT
-              </span>
-            </Link>
-            <Link href="/profile" className="text-gray-700 dark:text-gray-300 hover:text-indigo-600">
-              Profile
-            </Link>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       {/* Chat Area */}
       <div className="flex-1 overflow-y-auto px-4 py-6">
