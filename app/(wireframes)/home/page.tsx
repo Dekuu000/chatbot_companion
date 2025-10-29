@@ -1,11 +1,12 @@
 /**
- * Home Page - Landing page with navigation and feature overview
+ * Home Page Wireframe
+ * Landing page with navigation and feature overview
  */
 
 import Link from 'next/link'
 import { HiSparkles, HiChatBubbleLeftRight, HiDocumentText, HiUserCircle } from 'react-icons/hi2'
 
-export default function Home() {
+export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Navigation */}
