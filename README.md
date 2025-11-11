@@ -39,9 +39,9 @@ npm install
 
 1. Copy the sample env file:
    ```bash
-   cp .env.example .env.local
+   cp .env.example
    ```
-2. Edit `.env.local` and provide values for:
+2. Create `.env` file and provide values for:
    - `DATABASE_URL` – MySQL connection string (`mysql://user:password@host:port/db`)
    - `PERPLEXITY_API_KEY` – API key for Perplexity
    - `SYSTEM_PROMPT` / `SYSTEM_PROMPT_DIRECT` (optional overrides for the AI persona)
