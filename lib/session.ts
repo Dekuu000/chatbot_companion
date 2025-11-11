@@ -83,7 +83,7 @@ function getGuestStore(): { get: () => string | null; set: (value: string) => vo
   if (!isBrowser()) return null
 
   const globalKey = '__career_guest_session__'
-  const globalHost = window as Window & Record<string, string | undefined>
+  const globalHost = window as unknown as Record<string, string | undefined>
   return {
     get: () => globalHost[globalKey] ?? null,
     set: (value: string) => {
