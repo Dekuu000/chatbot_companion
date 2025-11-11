@@ -138,7 +138,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       await prisma.$transaction(tx)
     }
 
-    async function recordAssistantMessage(content: string) {
+    const recordAssistantMessage = async (content: string) => {
       if (!hasAuthenticatedUser || !convId) return
       await prisma.$transaction([
         prisma.chatMessage.create({
