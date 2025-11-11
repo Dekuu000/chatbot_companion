@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { analyticsService } from '@/lib/services/analytics.service'
 import { z } from 'zod'
 
+// Force dynamic rendering - this route should not be statically analyzed during build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const eventSchema = z.object({
   action: z.string().min(1),
   entityType: z.string().optional(),
