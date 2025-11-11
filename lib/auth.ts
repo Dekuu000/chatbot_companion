@@ -185,7 +185,7 @@ export async function getUserSession(userId: string): Promise<UserSession | null
     }
   } catch (error) {
     console.warn('Database unavailable for getUserSession:', error instanceof Error ? error.message : 'unknown error')
-    for (const [, fallbackUser] of FALLBACK_STORE) {
+    for (const fallbackUser of FALLBACK_STORE.values()) {
       if (fallbackUser.userId === userId) {
         return {
           userId: fallbackUser.userId,
