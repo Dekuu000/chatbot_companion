@@ -178,7 +178,7 @@ export class CareerService {
             verificationPlan: s.projectRecommendation || s.marketContext || s.fitReason || null,
           } satisfies CareerSuggestionInput
         })
-        .filter((item) => item.title && item.summary)
+        .filter((item: CareerSuggestionInput) => item.title && item.summary)
 
       return {
         suggestions: mapped,
