@@ -18,6 +18,8 @@ const nextConfig = {
     // your project has type errors. Use with caution.
     ignoreBuildErrors: false,
   },
+  // Handle pdf-parse as server-side external package
+  serverExternalPackages: ['pdf-parse'],
 }
 
 module.exports = nextConfig
