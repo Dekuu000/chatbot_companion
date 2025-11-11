@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { ensureProfile } from '@/lib/profile'
 import { extractTextFromResumeFile } from '@/lib/pdf-extractor'
-import { buildBriefProfileContext } from '@/lib/utils/profile-context'
-import { analyzeResumeWithAI, formatResumeAnalysisMessage } from '@/lib/services/resume.service'
-import { parseConversationTags } from '@/lib/ai/conversation-state'
-import { secureRoute } from '@/lib/middleware/route-guards'
-import { rateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
+
+// Force dynamic rendering - this route should not be statically analyzed during build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const SUPPORTED_MIME_TYPES = [
@@ -17,6 +14,13 @@ const SUPPORTED_MIME_TYPES = [
 
 async function handleResumeFeedback(request: NextRequest) {
   try {
+    // Lazy import to prevent Prisma initialization during build
+    const { prisma } = await import('@/lib/prisma')
+    const { ensureProfile } = await import('@/lib/profile')
+    const { buildBriefProfileContext } = await import('@/lib/utils/profile-context')
+    const { analyzeResumeWithAI, formatResumeAnalysisMessage } = await import('@/lib/services/resume.service')
+    const { parseConversationTags } = await import('@/lib/ai/conversation-state')
+    
     const authenticatedUserId = request.headers.get('x-user-id')
     if (!authenticatedUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -160,7 +164,14 @@ async function handleResumeFeedback(request: NextRequest) {
     return NextResponse.json({ error: `Failed to process resume feedback: ${message}` }, { status: 500 })
   }
 }
-export const POST = secureRoute(handleResumeFeedback, {
-  middlewares: [rateLimit(RATE_LIMITS.AI)],
-})
+// Export handler directly to avoid build-time analysis of secureRoute wrapper
+export async function POST(request: NextRequest) {
+  // Lazy import secureRoute and rateLimit to prevent any build-time analysis
+  const { secureRoute } = await import('@/lib/middleware/route-guards')
+  const { rateLimit, RATE_LIMITS } = await import('@/lib/middleware/rate-limit')
+  const handler = secureRoute(handleResumeFeedback, {
+    middlewares: [rateLimit(RATE_LIMITS.AI)],
+  })
+  return handler(request)
+}
 
