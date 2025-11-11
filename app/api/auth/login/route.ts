@@ -4,8 +4,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateUser } from '@/lib/auth'
 import { z } from 'zod'
+
+// Force dynamic rendering - this route should not be statically analyzed during build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 const loginSchema = z.object({
   email: z.string().email('Valid email is required'),
@@ -14,6 +17,9 @@ const loginSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // Lazy import authenticateUser to prevent Prisma initialization during build
+    const { authenticateUser } = await import('@/lib/auth')
+    
     const body = await request.json()
     const { email, password } = loginSchema.parse(body)
 
