@@ -466,7 +466,7 @@ export class CareerService {
       }
     })
 
-    if (bestMatch && bestMatch.score >= 3) {
+    if (bestMatch !== null && bestMatch.score >= 3) {
       return bestMatch.display
     }
 
