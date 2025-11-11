@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { extractTextFromResumeFile } from '@/lib/pdf-extractor'
-import { careerService } from '@/lib/services/career.service'
-import { secureRoute } from '@/lib/middleware/route-guards'
-import { rateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
+
+// Force dynamic rendering - this route should not be statically analyzed during build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 const SUPPORTED_RESUME_TYPES = new Set([
   'application/pdf',
@@ -62,6 +63,8 @@ async function handleSuggest(request: NextRequest) {
   }
 
   try {
+    // Lazy import to prevent Prisma initialization during build
+    const { careerService } = await import('@/lib/services/career.service')
     // Delegates to the AI-only pipeline (no static suggestions). Any errors bubble up so the UI can prompt a retry.
     const suggestions = await careerService.suggestCareers(userId, query, resumeText)
     return NextResponse.json({ suggestions }, { status: 200 })
@@ -74,6 +77,13 @@ async function handleSuggest(request: NextRequest) {
   }
 }
 
-export const POST = secureRoute(handleSuggest, {
-  middlewares: [rateLimit(RATE_LIMITS.CAREER_SUGGESTIONS)],
-})
+// Export handler directly to avoid build-time analysis of secureRoute wrapper
+export async function POST(request: NextRequest) {
+  // Lazy import secureRoute and rateLimit to prevent any build-time analysis
+  const { secureRoute } = await import('@/lib/middleware/route-guards')
+  const { rateLimit, RATE_LIMITS } = await import('@/lib/middleware/rate-limit')
+  const handler = secureRoute(handleSuggest, {
+    middlewares: [rateLimit(RATE_LIMITS.CAREER_SUGGESTIONS)],
+  })
+  return handler(request)
+}
