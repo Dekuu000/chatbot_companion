@@ -5,7 +5,6 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getPerplexityHeaders, PERPLEXITY_API_URL, PERPLEXITY_DEFAULT_MODEL, buildCareerGuideUserPrompt } from '@/lib/openai'
-import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { buildBriefProfileContext, buildProfileContext } from '@/lib/utils/profile-context'
 import { sanitizeWithLimit } from '@/lib/utils/sanitization'
@@ -16,12 +15,15 @@ import { deriveCoachingContext, buildPersonalizedCoachPlan, enforceContextualRel
 import { USER_STAGE_FOCUS } from '@/lib/ai/career-coach'
 import { loadConversationState, buildConversationTags } from '@/lib/ai/conversation-state'
 import type { ConversationTags } from '@/lib/ai/conversation-state'
-import { analyticsService } from '@/lib/services/analytics.service'
 import type { UserStage } from '@/lib/ai/chat-response'
 import type { Profile } from '@prisma/client'
 import type { HistoryMessage, ResumeSnapshot } from '@/lib/ai/career-coach'
 import { listLearningTracks } from '@/lib/content/ph-knowledge'
 import { mapInterestToCareers, describeInterest } from '@/lib/ai/interest-profiles'
+
+// Force dynamic rendering - this route should not be statically analyzed during build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 const chatSchema = z.object({
   message: z.string().min(1).max(5000),
@@ -30,6 +32,9 @@ const chatSchema = z.object({
 })
 
 async function handleChat(request: NextRequest) {
+  // Lazy import to prevent Prisma initialization during build
+  const { prisma } = await import('@/lib/prisma')
+  const { analyticsService } = await import('@/lib/services/analytics.service')
   let body: any
   try {
     body = await request.json()
