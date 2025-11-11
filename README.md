@@ -25,7 +25,7 @@ A Next.js application that guides students exploring career paths matched to the
 ### 1. Clone the project
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/chatbot-companion.git
+git clone https://github.com/Dekuu000/chatbot_companion.git
 cd chatbot-companion
 ```
 
