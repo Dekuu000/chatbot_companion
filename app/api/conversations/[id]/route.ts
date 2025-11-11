@@ -89,18 +89,21 @@ async function deleteConversation(request: NextRequest, params: { id: string }) 
   return NextResponse.json({ success: true }, { status: 200 })
 }
 
-export async function GET(request: NextRequest, context: { params: { id: string } }) {
-  const handler = secureRoute((req) => getConversation(req, context.params))
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const handler = secureRoute((req) => getConversation(req, { id }))
   return handler(request)
 }
 
-export async function PATCH(request: NextRequest, context: { params: { id: string } }) {
-  const handler = secureRoute((req) => updateConversation(req, context.params))
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const handler = secureRoute((req) => updateConversation(req, { id }))
   return handler(request)
 }
 
-export async function DELETE(request: NextRequest, context: { params: { id: string } }) {
-  const handler = secureRoute((req) => deleteConversation(req, context.params))
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const handler = secureRoute((req) => deleteConversation(req, { id }))
   return handler(request)
 }
 

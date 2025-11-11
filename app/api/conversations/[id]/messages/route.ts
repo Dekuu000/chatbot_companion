@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { secureRoute } from '@/lib/middleware/route-guards'
 import { parseConversationTags } from '@/lib/ai/conversation-state'
+import { memoryGetConversation, memoryListMessages, memoryAddMessage } from '@/lib/cache/conversation-store'
 
 async function ensureConversationOwnership(conversationId: string, userId: string) {
   try {
@@ -110,13 +111,15 @@ async function createMessage(request: NextRequest, params: { id: string }) {
   }
 }
 
-export async function GET(request: NextRequest, context: { params: { id: string } }) {
-  const handler = secureRoute((req) => listMessages(req, context.params))
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const handler = secureRoute((req) => listMessages(req, { id }))
   return handler(request)
 }
 
-export async function POST(request: NextRequest, context: { params: { id: string } }) {
-  const handler = secureRoute((req) => createMessage(req, context.params))
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const handler = secureRoute((req) => createMessage(req, { id }))
   return handler(request)
 }
 
