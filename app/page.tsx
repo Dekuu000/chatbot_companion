@@ -1,88 +1,137 @@
-/**
- * Home Page - Landing page with navigation and feature overview
- */
+"use client"
 
-import Link from 'next/link'
-import { HiChatBubbleLeftRight, HiDocumentText, HiUserCircle } from 'react-icons/hi2'
-import Navbar from '@/components/Navbar'
+import Link from "next/link"
+import { useEffect, useState } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Sparkles, MessageSquare, FileText, GraduationCap, ArrowRight } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { getSession, type UserSession } from "@/lib/session"
 
 export default function Home() {
+  const [session, setSession] = useState<UserSession | null>(null)
+
+  useEffect(() => {
+    setSession(getSession())
+  }, [])
+
+  const careerMatchesHref = session ? "/dashboard" : "/login?redirect=/dashboard"
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      <Navbar />
-
+    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)]">
       {/* Hero Section */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="text-center mb-16">
-          <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-4">
-            AI-Powered Career Pathway Explorer
-          </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-            Discover your ideal career path with personalized AI guidance, interview prep, and resume feedback
-          </p>
-        </div>
-
-        {/* Feature Cards */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {/* Chat Feature */}
-          <Link href="/chat" className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow">
-            <HiChatBubbleLeftRight className="h-12 w-12 text-indigo-600 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-              AI Chatbot
-            </h3>
-            <p className="text-gray-600 dark:text-gray-300">
-              Get instant answers about career paths, skills, and opportunities
-            </p>
+      <div className="text-center max-w-3xl mx-auto mb-16">
+        <h1 className="text-5xl font-bold text-text-primary mb-4">
+          Discover Your Career Path
+        </h1>
+        <p className="text-xl text-text-secondary mb-8">
+          Get personalized career recommendations powered by AI, tailored to your skills, interests, and goals.
+        </p>
+        <div className="flex gap-4 justify-center">
+          <Link
+            href={careerMatchesHref}
+            className={cn(
+              "inline-flex items-center justify-center whitespace-nowrap rounded-2xl text-base font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-12 px-8"
+            )}
+          >
+            Career Matches
+            <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
-
-          {/* Career Suggestions */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-            <HiSparkles className="h-12 w-12 text-indigo-600 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-              Career Suggestions
-            </h3>
-            <p className="text-gray-600 dark:text-gray-300">
-              Receive personalized career recommendations based on your profile
-            </p>
-          </div>
-
-          {/* Resume Review */}
-          <Link href="/resume" className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow">
-            <HiDocumentText className="h-12 w-12 text-indigo-600 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-              Resume Review
-            </h3>
-            <p className="text-gray-600 dark:text-gray-300">
-              Upload your resume for AI-powered feedback and career alignment
-            </p>
-          </Link>
-
-          {/* Interview Prep */}
-          <Link href="/interview" className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow">
-            <HiUserCircle className="h-12 w-12 text-indigo-600 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-              Interview Prep
-            </h3>
-            <p className="text-gray-600 dark:text-gray-300">
-              Practice with AI-generated interview questions tailored to your goals
-            </p>
+          <Link
+            href="/chat"
+            className={cn(
+              "inline-flex items-center justify-center whitespace-nowrap rounded-2xl text-base font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border-2 border-primary text-primary hover:bg-primary/10 h-12 px-8"
+            )}
+          >
+            Try Chat
           </Link>
         </div>
+      </div>
 
-        {/* CTA Section */}
-        <div className="bg-indigo-600 rounded-lg shadow-lg p-8 text-center text-white">
-          <h2 className="text-3xl font-bold mb-4">Ready to explore your career path?</h2>
-          <p className="text-indigo-100 mb-6">Start by setting up your profile or jump into a chat!</p>
-          <div className="flex justify-center space-x-4">
-            <Link href="/profile" className="bg-white text-indigo-600 px-6 py-3 rounded-lg font-semibold hover:bg-indigo-50 transition">
-              Set Up Profile
+      {/* Features Grid */}
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-6xl">
+        <Card className="hover:shadow-medium transition-shadow">
+          <CardHeader>
+            <Sparkles className="h-10 w-10 text-primary mb-2" />
+            <CardTitle>Career Matches</CardTitle>
+            <CardDescription>
+              Get personalized career recommendations based on your profile
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-text-secondary mb-4">
+              Discover careers that match your unique profile and goals
+            </p>
+            <Link
+              href={careerMatchesHref}
+              className={cn(
+                "inline-flex items-center justify-center whitespace-nowrap rounded-2xl text-sm font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted hover:text-text-primary w-full h-11 px-6 py-2"
+              )}
+            >
+              Explore Matches <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
-            <Link href="/chat" className="bg-indigo-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-800 transition">
-              Start Chatting
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-medium transition-shadow">
+          <CardHeader>
+            <MessageSquare className="h-10 w-10 text-primary mb-2" />
+            <CardTitle>AI Chat</CardTitle>
+            <CardDescription>
+              Ask questions about careers, skills, and opportunities
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link
+              href="/chat"
+              className={cn(
+                "inline-flex items-center justify-center whitespace-nowrap rounded-2xl text-sm font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted hover:text-text-primary w-full h-11 px-6 py-2"
+              )}
+            >
+              Start Chat <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
-          </div>
-        </div>
-      </main>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-medium transition-shadow">
+          <CardHeader>
+            <FileText className="h-10 w-10 text-primary mb-2" />
+            <CardTitle>Resume Review</CardTitle>
+            <CardDescription>
+              Upload your resume for AI-powered feedback and analysis
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link
+              href={session ? "/resume" : "/login?redirect=/resume"}
+              className={cn(
+                "inline-flex items-center justify-center whitespace-nowrap rounded-2xl text-sm font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted hover:text-text-primary w-full h-11 px-6 py-2"
+              )}
+            >
+              Upload Resume <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-medium transition-shadow">
+          <CardHeader>
+            <GraduationCap className="h-10 w-10 text-primary mb-2" />
+            <CardTitle>Learning Path</CardTitle>
+            <CardDescription>
+              Get a personalized roadmap to achieve your career goals
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link
+              href={session ? "/learning" : "/login?redirect=/learning"}
+              className={cn(
+                "inline-flex items-center justify-center whitespace-nowrap rounded-2xl text-sm font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted hover:text-text-primary w-full h-11 px-6 py-2"
+              )}
+            >
+              View Path <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

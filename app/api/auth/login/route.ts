@@ -4,29 +4,24 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { demoLogin } from '@/lib/auth'
+import { authenticateUser } from '@/lib/auth'
 import { z } from 'zod'
 
 const loginSchema = z.object({
-  username: z.string().min(1).max(50),
+  email: z.string().email('Valid email is required'),
+  password: z.string().min(1, 'Password is required'),
 })
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { username } = loginSchema.parse(body)
+    const { email, password } = loginSchema.parse(body)
 
-    if (!username || username.trim().length === 0) {
-      return NextResponse.json(
-        { error: 'Username is required' },
-        { status: 400 }
-      )
+    const session = await authenticateUser({ email: email.trim(), password })
+    if (!session) {
+      return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 })
     }
 
-    const session = await demoLogin(username.trim())
-
-    // In a real app, you'd set a secure HTTP-only cookie or JWT here
-    // For demo, we'll return the session and let client store it
     return NextResponse.json({ session }, { status: 200 })
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -36,10 +31,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Log detailed error for debugging
     console.error('Login error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorStack = error instanceof Error ? error.stack : undefined
+    
+    // Return more detailed error in development
+    if (process.env.NODE_ENV === 'development') {
+      return NextResponse.json(
+        { 
+          error: 'Internal server error',
+          message: errorMessage,
+          stack: errorStack
+        },
+        { status: 500 }
+      )
+    }
+    
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

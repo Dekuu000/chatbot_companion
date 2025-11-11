@@ -1,62 +1,57 @@
-/**
- * Navigation Component with Auth
- */
-
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { HiSparkles } from 'react-icons/hi2'
-import { getSession, clearSession } from '@/lib/session'
 import { useRouter } from 'next/navigation'
+import { useSessionContext } from '@/components/providers/session-provider'
 
 export default function Navbar() {
-  const [session, setSession] = useState<{ userId: string; username: string } | null>(null)
+  const { state, status, signOut } = useSessionContext()
   const router = useRouter()
 
-  useEffect(() => {
-    setSession(getSession())
-  }, [])
+  const isAuthenticated = state.mode === 'authenticated'
+  const displayName = state.user?.name || state.user?.email || 'Welcome'
 
   const handleLogout = () => {
-    clearSession()
-    setSession(null)
-    router.push('/login')
+    signOut()
+    router.push('/')
+    router.refresh()
   }
 
   return (
-    <nav className="bg-white dark:bg-gray-800 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
+    <nav className="bg-white shadow-sm dark:bg-gray-800">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 justify-between">
           <Link href="/" className="flex items-center">
             <HiSparkles className="h-8 w-8 text-indigo-600" />
-            <span className="ml-2 text-xl font-bold text-gray-900 dark:text-white">
-              Chatbot Companion
-            </span>
+            <span className="ml-2 text-xl font-bold text-gray-900 dark:text-white">Chatbot Companion</span>
           </Link>
           <div className="flex items-center space-x-4">
-            {session ? (
+            {status === 'ready' && isAuthenticated ? (
               <>
-                <span className="text-sm text-gray-600 dark:text-gray-300">
-                  Welcome, {session.username}
-                </span>
-                <Link href="/profile" className="text-gray-700 dark:text-gray-300 hover:text-indigo-600">
+                <span className="text-sm text-gray-600 dark:text-gray-300">{displayName}</span>
+                <Link href="/profile" className="text-gray-700 hover:text-indigo-600 dark:text-gray-300">
                   Profile
                 </Link>
-                <Link href="/chat" className="text-gray-700 dark:text-gray-300 hover:text-indigo-600">
+                <Link href="/chat" className="text-gray-700 hover:text-indigo-600 dark:text-gray-300">
                   Chat
                 </Link>
-                <button
-                  onClick={handleLogout}
-                  className="text-gray-700 dark:text-gray-300 hover:text-indigo-600"
-                >
+                <button onClick={handleLogout} className="text-gray-700 hover:text-indigo-600 dark:text-gray-300">
                   Logout
                 </button>
               </>
             ) : (
-              <Link href="/login" className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
-                Login
-              </Link>
+              <>
+                <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  Guest mode
+                </div>
+                <Link href="/login" className="text-gray-700 hover:text-indigo-600 dark:text-gray-300">
+                  Login
+                </Link>
+                <Link href="/signup" className="text-indigo-600 hover:text-indigo-500">
+                  Create account
+                </Link>
+              </>
             )}
           </div>
         </div>

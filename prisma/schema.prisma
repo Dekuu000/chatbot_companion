@@ -13,8 +13,9 @@ datasource db {
 // User model for demo login or mock user
 model User {
   id            String       @id @default(cuid())
-  username      String       @unique
+  username      String?      @unique
   email         String?      @unique
+  passwordHash  String?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   
@@ -24,6 +25,10 @@ model User {
   resumes       Resume[]
   careerSuggestions CareerSuggestion[]
   feedbacks     Feedback[]
+  quizResponses QuizResponse[]
+  learningPaths LearningPath[]
+  interviewSessions InterviewSession[]
+  recommendations Recommendation[]
   
   @@map("users")
 }
@@ -69,6 +74,8 @@ model CareerSuggestion {
   
   @@map("career_suggestions")
   @@index([userId])
+  @@index([userId, createdAt])
+  @@index([confidenceScore])
 }
 
 // Conversation metadata (chat history stored client-side, only metadata here)
@@ -77,10 +84,13 @@ model Conversation {
   userId        String
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  title         String?  // Optional conversation title
+  title         String?  // Optional conversation title, populated after first user message
+  archived      Boolean  @default(false)
   messageCount  Int      @default(0)
   lastMessageAt DateTime @default(now())
+  contextTags   String?  @db.Text
   
+  messages      ChatMessage[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   
@@ -112,6 +122,8 @@ model Resume {
   
   @@map("resumes")
   @@index([userId])
+  @@index([userId, createdAt])
+  @@index([overallScore])
 }
 
 // Feedback model for storing various types of feedback
@@ -144,5 +156,127 @@ model AuditLog {
   
   @@map("audit_logs")
   @@index([userId])
+  @@index([createdAt])
+}
+// Chat messages for persistent conversation history
+model ChatMessage {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String
+  content        String       @db.Text
+  createdAt      DateTime     @default(now())
+
+  @@map("chat_messages")
+  @@index([conversationId])
+  @@index([conversationId, createdAt])
+}
+
+// Quiz responses for career profiling
+model QuizResponse {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  quizType      String   // "skills", "interests", "personality"
+  responses     Json     // Quiz answers (structured JSON)
+  results       Json     // Calculated results (structured JSON)
+  
+  createdAt     DateTime @default(now())
+  
+  @@map("quiz_responses")
+  @@index([userId])
+  @@index([userId, quizType])
+  @@index([createdAt])
+}
+
+// Learning paths for personalized career development
+model LearningPath {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title         String
+  description   String?  @db.Text
+  careerGoal    String
+  steps         Json     // Array of learning steps
+  progress      Float    @default(0) // 0-1 progress
+  completed     Boolean  @default(false)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("learning_paths")
+  @@index([userId])
+  @@index([userId, completed])
+  @@index([createdAt])
+}
+
+// Interview sessions with scoring
+model InterviewSession {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  jobTitle      String
+  difficulty    String   // "easy", "medium", "hard"
+  questions     Json     // Array of questions
+  responses     Json?    // User responses
+  scores        Json?     // Scoring results
+  overallScore  Float?   // 0-100 overall score
+  feedback      String?  @db.Text // AI-generated feedback
+  
+  createdAt     DateTime @default(now())
+  completedAt   DateTime?
+  
+  @@map("interview_sessions")
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([overallScore])
+}
+
+// Recommendations - General-purpose recommendations table
+// Can store various types: career paths, courses, resources, actions, etc.
+model Recommendation {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Recommendation details
+  type          String   // "career", "course", "resource", "skill", "action", etc.
+  title         String
+  description   String?  @db.Text
+  category      String?  // e.g., "technical", "soft-skills", "networking"
+  
+  // Recommendation content
+  content       Json     // Flexible JSON structure for recommendation-specific data
+  priority      Int      @default(5) // 1-10 priority score
+  relevanceScore Float?  // 0-1 relevance score based on user profile
+  
+  // Action items
+  actionUrl     String?  // Optional URL to take action
+  actionText    String?  // Optional action button text
+  
+  // Status tracking
+  viewed        Boolean  @default(false)
+  saved         Boolean  @default(false)
+  completed     Boolean  @default(false)
+  dismissed     Boolean  @default(false)
+  
+  // Metadata
+  source        String?  // e.g., "ai_analysis", "resume_review", "quiz_results"
+  metadata      String?  @db.Text // Additional JSON metadata
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  viewedAt      DateTime?
+  completedAt   DateTime?
+  
+  @@map("recommendations")
+  @@index([userId])
+  @@index([userId, type])
+  @@index([userId, saved])
+  @@index([userId, completed])
+  @@index([relevanceScore])
   @@index([createdAt])
 }

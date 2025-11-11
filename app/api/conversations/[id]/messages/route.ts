@@ -1,0 +1,127 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { secureRoute } from '@/lib/middleware/route-guards'
+import { parseConversationTags } from '@/lib/ai/conversation-state'
+
+async function ensureConversationOwnership(conversationId: string, userId: string) {
+  try {
+    const conversation = await prisma.conversation.findFirst({
+      where: {
+        id: conversationId,
+        userId,
+        archived: false,
+      },
+    })
+
+    if (!conversation) {
+      return null
+    }
+
+    return conversation
+  } catch (error) {
+    console.warn('conversation_lookup_fallback', error instanceof Error ? error.message : error)
+    const conversation = memoryGetConversation(conversationId)
+    if (conversation && conversation.userId === userId && !conversation.archived) {
+      return conversation
+    }
+    return null
+  }
+}
+
+async function listMessages(request: NextRequest, params: { id: string }) {
+  const userId = request.headers.get('x-user-id') ?? request.nextUrl.searchParams.get('userId')
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const conversation = await ensureConversationOwnership(params.id, userId)
+  if (!conversation) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  try {
+    const messages = await prisma.chatMessage.findMany({
+      where: { conversationId: conversation.id },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, role: true, content: true, createdAt: true },
+    })
+
+    return NextResponse.json(
+      {
+        messages,
+        contextTags: parseConversationTags(conversation.contextTags),
+      },
+      { status: 200 }
+    )
+  } catch (error) {
+    console.warn('conversation_messages_fallback', error instanceof Error ? error.message : error)
+    const fallback = memoryListMessages(conversation.id)
+    if (!fallback) {
+      return NextResponse.json({ messages: [], contextTags: null }, { status: 200 })
+    }
+    return NextResponse.json(
+      {
+        messages: fallback.messages,
+        contextTags: parseConversationTags(fallback.conversation.contextTags),
+      },
+      { status: 200 }
+    )
+  }
+}
+
+async function createMessage(request: NextRequest, params: { id: string }) {
+  const userId = request.headers.get('x-user-id') ?? request.nextUrl.searchParams.get('userId')
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const conversation = await ensureConversationOwnership(params.id, userId)
+  if (!conversation) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  const body = await request.json().catch(() => ({}))
+  const role = typeof body?.role === 'string' ? body.role : null
+  const content = typeof body?.content === 'string' ? body.content : null
+
+  if (!role || !content) {
+    return NextResponse.json({ error: 'Invalid body' }, { status: 400 })
+  }
+
+  try {
+    const message = await prisma.chatMessage.create({
+      data: { conversationId: conversation.id, role, content },
+      select: { id: true, role: true, content: true },
+    })
+
+    await prisma.conversation.update({
+      where: { id: conversation.id },
+      data: { lastMessageAt: new Date(), messageCount: { increment: 1 } },
+    })
+
+    return NextResponse.json({ message }, { status: 201 })
+  } catch (error) {
+    console.warn('conversation_message_create_fallback', error instanceof Error ? error.message : error)
+    const message = memoryAddMessage(conversation.id, role as 'user' | 'assistant', content)
+    if (!message) {
+      return NextResponse.json({ error: 'Failed to store message' }, { status: 500 })
+    }
+    return NextResponse.json({ message }, { status: 201 })
+  }
+}
+
+export async function GET(request: NextRequest, context: { params: { id: string } }) {
+  const handler = secureRoute((req) => listMessages(req, context.params))
+  return handler(request)
+}
+
+export async function POST(request: NextRequest, context: { params: { id: string } }) {
+  const handler = secureRoute((req) => createMessage(req, context.params))
+  return handler(request)
+}
+
+
+
+
+
+
