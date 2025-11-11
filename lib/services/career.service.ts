@@ -446,7 +446,8 @@ export class CareerService {
 
     type BestMatch = { role: string; display: string; score: number }
     let bestMatch: BestMatch | null = null
-    insights.forEach((insight) => {
+    
+    for (const insight of insights) {
       const roleKey = insight.role
       const displayKey = insight.displayName.toLowerCase()
       let score = 0
@@ -465,12 +466,10 @@ export class CareerService {
       if (!bestMatch || score > bestMatch.score) {
         bestMatch = { role: roleKey, display: insight.displayName, score }
       }
-    })
+    }
 
-    if (bestMatch !== null) {
-      if (bestMatch.score >= 3) {
-        return bestMatch.display
-      }
+    if (bestMatch && bestMatch.score >= 3) {
+      return bestMatch.display
     }
 
     const keywordRoleMap: Record<string, string> = {
