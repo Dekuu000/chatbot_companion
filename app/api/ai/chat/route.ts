@@ -6,14 +6,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPerplexityHeaders, PERPLEXITY_API_URL, PERPLEXITY_DEFAULT_MODEL, buildCareerGuideUserPrompt } from '@/lib/openai'
 import { z } from 'zod'
-import { buildBriefProfileContext, buildProfileContext } from '@/lib/utils/profile-context'
+// buildBriefProfileContext and buildProfileContext will be lazy imported
 import { sanitizeWithLimit } from '@/lib/utils/sanitization'
 import { rateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
 import { secureRoute } from '@/lib/middleware/route-guards'
 import { buildIntentAwareFallback, determineUserStage, detectIntent, formatAdvisorResponse, messageIsAmbiguous, messageSuggestsTagalog, stripInternalThought } from '@/lib/ai/chat-response'
 import { deriveCoachingContext, buildPersonalizedCoachPlan, enforceContextualRelevance, buildSystemPrompt, getIntentScaffold } from '@/lib/ai/career-coach'
 import { USER_STAGE_FOCUS } from '@/lib/ai/career-coach'
-import { buildConversationTags } from '@/lib/ai/conversation-state'
+// buildConversationTags will be lazy imported
 import type { ConversationTags } from '@/lib/ai/conversation-state'
 import type { UserStage } from '@/lib/ai/chat-response'
 import type { Profile } from '@prisma/client'
@@ -82,6 +82,8 @@ async function handleChat(request: NextRequest) {
     }
   }
 
+  // Lazy import buildProfileContext to prevent Prisma type analysis during build
+  const { buildProfileContext } = await import('@/lib/utils/profile-context')
   const profileContext = profile ? buildProfileContext(profile) : ''
   const userStage = determineUserStage(sanitizedMessage, profile || null)
   let intentResult = detectIntent(sanitizedMessage)
@@ -197,11 +199,15 @@ async function handleChat(request: NextRequest) {
     recommendedCareers: interestCareers,
   })
   const learningTracks = listLearningTracks(coachingContext.targetDisplay || coachingContext.targetRole)
+  // Lazy import buildConversationTags to prevent Prisma type analysis during build
+  const { buildConversationTags } = await import('@/lib/ai/conversation-state')
   const conversationTags = !isAnonymous && userId ? buildConversationTags(coachingContext, userStage, intent) : null
 
   const combinedPersonaContext = `${personaContext}\nPersona: ${coachingContext.personaName}\n${coachingContext.personaContext}`
 
   const intentFocus = getIntentScaffold(intent)
+  // Lazy import buildBriefProfileContext to prevent Prisma type analysis during build
+  const { buildBriefProfileContext } = await import('@/lib/utils/profile-context')
   const profileSummary = profile ? buildBriefProfileContext(profile) : undefined
   const systemPrompt = buildSystemPrompt({
     mode: sessionMode,
