@@ -20,7 +20,7 @@ export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { setAuthenticatedSession, state: sessionState, status: sessionStatus } = useSessionContext()
-  const redirectParam = searchParams.get('redirect')
+  const redirectParam = searchParams?.get('redirect')
   const redirect = redirectParam && redirectParam.startsWith('/chat') ? redirectParam : '/chat'
   const isSessionReady = sessionStatus === 'ready'
   const isAuthenticated = sessionState.mode === 'authenticated'
