@@ -110,6 +110,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const id = await ensureConversation()
       if (!id) return
       const title = toConversationTitle(text)
+      
+      // Check if this is the first message before building transaction
+      const conversation = await prisma.conversation.findUnique({
+        where: { id },
+        select: { messageCount: true },
+      })
+      const isFirstMessage = conversation?.messageCount === 0
+      
       const tx = [
         prisma.chatMessage.create({
           data: {
@@ -118,31 +126,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             content: text,
           },
         }),
-      ]
-      if (title) {
-        // Check if this is the first message before updating title
-        const conversation = await prisma.conversation.findUnique({
-          where: { id },
-          select: { messageCount: true },
-        })
-        if (conversation && conversation.messageCount === 0) {
-          tx.push(
-            prisma.conversation.update({
-              where: { id },
-              data: { title },
-            })
-          )
-        }
-      }
-      tx.push(
         prisma.conversation.update({
           where: { id },
           data: {
             messageCount: { increment: 1 },
             lastMessageAt: new Date(),
+            ...(title && isFirstMessage ? { title } : {}),
           },
-        })
-      )
+        }),
+      ]
       await prisma.$transaction(tx)
     }
 
