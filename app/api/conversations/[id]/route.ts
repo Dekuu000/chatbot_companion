@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import { secureRoute } from '@/lib/middleware/route-guards'
 import { parseConversationTags } from '@/lib/ai/conversation-state'
+
+// Force dynamic rendering - this route should not be statically analyzed during build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 async function getConversation(request: NextRequest, params: { id: string }) {
   const userId = request.headers.get('x-user-id') ?? request.nextUrl.searchParams.get('userId')
@@ -9,6 +12,8 @@ async function getConversation(request: NextRequest, params: { id: string }) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // Lazy import prisma to prevent initialization during build
+  const { prisma } = await import('@/lib/prisma')
   const conversation = await prisma.conversation.findFirst({
     where: {
       id: params.id,
@@ -39,6 +44,8 @@ async function updateConversation(request: NextRequest, params: { id: string }) 
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // Lazy import prisma to prevent initialization during build
+  const { prisma } = await import('@/lib/prisma')
   const existing = await prisma.conversation.findFirst({
     where: {
       id: params.id,
@@ -74,6 +81,8 @@ async function deleteConversation(request: NextRequest, params: { id: string }) 
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // Lazy import prisma to prevent initialization during build
+  const { prisma } = await import('@/lib/prisma')
   const existing = await prisma.conversation.findFirst({
     where: {
       id: params.id,
