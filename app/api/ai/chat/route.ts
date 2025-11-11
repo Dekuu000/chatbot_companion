@@ -8,8 +8,8 @@ import { getPerplexityHeaders, PERPLEXITY_API_URL, PERPLEXITY_DEFAULT_MODEL, bui
 import { z } from 'zod'
 // buildBriefProfileContext and buildProfileContext will be lazy imported
 import { sanitizeWithLimit } from '@/lib/utils/sanitization'
-import { rateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
-import { secureRoute } from '@/lib/middleware/route-guards'
+// rateLimit and RATE_LIMITS will be lazy imported
+// secureRoute will be lazy imported
 import { buildIntentAwareFallback, determineUserStage, detectIntent, formatAdvisorResponse, messageIsAmbiguous, messageSuggestsTagalog, stripInternalThought } from '@/lib/ai/chat-response'
 import { deriveCoachingContext, buildPersonalizedCoachPlan, enforceContextualRelevance, buildSystemPrompt, getIntentScaffold } from '@/lib/ai/career-coach'
 import { USER_STAGE_FOCUS } from '@/lib/ai/career-coach'
@@ -361,7 +361,14 @@ function streamResponse(convId: string | null, isNewConversation: boolean, conte
   })
 }
 
-export const POST = secureRoute(handleChat, {
-  allowGuest: true,
-  middlewares: [rateLimit(RATE_LIMITS.AI)],
-})
+// Export handler directly to avoid build-time analysis of secureRoute wrapper
+export async function POST(request: NextRequest) {
+  // Lazy import secureRoute and rateLimit to prevent any build-time analysis
+  const { secureRoute } = await import('@/lib/middleware/route-guards')
+  const { rateLimit, RATE_LIMITS } = await import('@/lib/middleware/rate-limit')
+  const handler = secureRoute(handleChat, {
+    allowGuest: true,
+    middlewares: [rateLimit(RATE_LIMITS.AI)],
+  })
+  return handler(request)
+}
