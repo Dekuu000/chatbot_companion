@@ -365,7 +365,7 @@ Provide constructive, actionable feedback.`,
     scores.forEach((s) => {
       allStrengths.push(...s.strengths)
     })
-    return [...new Set(allStrengths)]
+    return Array.from(new Set(allStrengths))
   }
 
   private extractWeaknesses(scores: InterviewScore[]): string[] {
@@ -373,7 +373,7 @@ Provide constructive, actionable feedback.`,
     scores.forEach((s) => {
       allWeaknesses.push(...s.weaknesses)
     })
-    return [...new Set(allWeaknesses)]
+    return Array.from(new Set(allWeaknesses))
   }
 }
 

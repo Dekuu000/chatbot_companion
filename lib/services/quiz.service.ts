@@ -153,13 +153,13 @@ Respond with JSON: {
 
     if (quizType === 'skills' && results.skills.length > 0) {
       const existingSkills = JSON.parse(profile.skills || '[]')
-      const combined = [...new Set([...existingSkills, ...results.skills])]
+      const combined = Array.from(new Set([...existingSkills, ...results.skills]))
       updates.skills = JSON.stringify(combined)
     }
 
     if (quizType === 'interests' && results.interests.length > 0) {
       const existingInterests = JSON.parse(profile.interests || '[]')
-      const combined = [...new Set([...existingInterests, ...results.interests])]
+      const combined = Array.from(new Set([...existingInterests, ...results.interests]))
       updates.interests = JSON.stringify(combined)
     }
 
