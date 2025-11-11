@@ -13,7 +13,7 @@ import { secureRoute } from '@/lib/middleware/route-guards'
 import { buildIntentAwareFallback, determineUserStage, detectIntent, formatAdvisorResponse, messageIsAmbiguous, messageSuggestsTagalog, stripInternalThought } from '@/lib/ai/chat-response'
 import { deriveCoachingContext, buildPersonalizedCoachPlan, enforceContextualRelevance, buildSystemPrompt, getIntentScaffold } from '@/lib/ai/career-coach'
 import { USER_STAGE_FOCUS } from '@/lib/ai/career-coach'
-import { loadConversationState, buildConversationTags } from '@/lib/ai/conversation-state'
+import { buildConversationTags } from '@/lib/ai/conversation-state'
 import type { ConversationTags } from '@/lib/ai/conversation-state'
 import type { UserStage } from '@/lib/ai/chat-response'
 import type { Profile } from '@prisma/client'
@@ -65,6 +65,8 @@ async function handleChat(request: NextRequest) {
 
   if (!isAnonymous && userId) {
     try {
+      // Lazy import loadConversationState to prevent Prisma type analysis during build
+      const { loadConversationState } = await import('@/lib/ai/conversation-state')
       const state = await loadConversationState({
         prisma,
         userId,
