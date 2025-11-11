@@ -139,8 +139,12 @@ async function handleOverview(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const [profile, suggestions, resumeRecords, interviews, recommendations, auditLogs, latestConversation] = await Promise.all([
+    const [profile, user, suggestions, resumeRecords, interviews, recommendations, auditLogs, latestConversation] = await Promise.all([
       ensureProfile(userId),
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true, username: true },
+      }),
       careerService.getUserSuggestions(userId, 12),
       prisma.resume.findMany({
         where: { userId },
@@ -191,9 +195,8 @@ async function handleOverview(request: NextRequest) {
     const completion = computeProfileCompletion(profile, resumeCount)
     const skillsArray = parseJsonArray<string>(profile.skills)
     const greetingName =
-      profile.firstName ||
-      profile.fullName ||
-      (typeof profile.email === 'string' ? profile.email.split('@')[0] : null) ||
+      user?.username ||
+      (user?.email ? user.email.split('@')[0] : null) ||
       'there'
 
     const formattedSuggestions = suggestions
