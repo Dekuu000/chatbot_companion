@@ -6,7 +6,7 @@
 'use client'
 
 import React, { Component, ErrorInfo, ReactNode } from 'react'
-import { Card, CardHeader, CardContent, Button } from '../ui'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button } from '../ui'
 
 interface Props {
   children: ReactNode
@@ -41,10 +41,10 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="min-h-screen flex items-center justify-center p-4">
           <Card className="max-w-md">
-            <CardHeader
-              title="Something went wrong"
-              subtitle="We're sorry, but something unexpected happened."
-            />
+            <CardHeader>
+              <CardTitle>Something went wrong</CardTitle>
+              <CardDescription>We're sorry, but something unexpected happened.</CardDescription>
+            </CardHeader>
             <CardContent>
               {this.state.error && (
                 <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
