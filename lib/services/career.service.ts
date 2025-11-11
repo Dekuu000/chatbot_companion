@@ -444,7 +444,8 @@ export class CareerService {
       .join(' ')
       .toLowerCase()
 
-    let bestMatch: { role: string; display: string; score: number } | null = null
+    type BestMatch = { role: string; display: string; score: number }
+    let bestMatch: BestMatch | null = null
     insights.forEach((insight) => {
       const roleKey = insight.role
       const displayKey = insight.displayName.toLowerCase()
@@ -466,8 +467,10 @@ export class CareerService {
       }
     })
 
-    if (bestMatch !== null && bestMatch.score >= 3) {
-      return bestMatch.display
+    if (bestMatch !== null) {
+      if (bestMatch.score >= 3) {
+        return bestMatch.display
+      }
     }
 
     const keywordRoleMap: Record<string, string> = {
