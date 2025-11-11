@@ -83,7 +83,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const effectiveUserId = cleanHeaderUserId ?? cleanBodyUserId
     const hasAuthenticatedUser = typeof effectiveUserId === 'string'
 
-    async function ensureConversation(): Promise<string | null> {
+    const ensureConversation = async (): Promise<string | null> => {
       if (!hasAuthenticatedUser) return null
       const cleanUserId = effectiveUserId!
       if (convId) {
@@ -105,7 +105,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return convId
     }
 
-    async function recordUserMessage(text: string) {
+    const recordUserMessage = async (text: string) => {
       if (!hasAuthenticatedUser) return
       const id = await ensureConversation()
       if (!id) return
