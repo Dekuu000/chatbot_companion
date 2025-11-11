@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import { secureRoute } from '@/lib/middleware/route-guards'
 import { parseConversationTags } from '@/lib/ai/conversation-state'
 import { memoryGetConversation, memoryListMessages, memoryAddMessage } from '@/lib/cache/conversation-store'
 
+// Force dynamic rendering - this route should not be statically analyzed during build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 async function ensureConversationOwnership(conversationId: string, userId: string) {
   try {
+    // Lazy import prisma to prevent initialization during build
+    const { prisma } = await import('@/lib/prisma')
     const conversation = await prisma.conversation.findFirst({
       where: {
         id: conversationId,
@@ -41,6 +46,8 @@ async function listMessages(request: NextRequest, params: { id: string }) {
   }
 
   try {
+    // Lazy import prisma to prevent initialization during build
+    const { prisma } = await import('@/lib/prisma')
     const messages = await prisma.chatMessage.findMany({
       where: { conversationId: conversation.id },
       orderBy: { createdAt: 'asc' },
@@ -90,6 +97,8 @@ async function createMessage(request: NextRequest, params: { id: string }) {
   }
 
   try {
+    // Lazy import prisma to prevent initialization during build
+    const { prisma } = await import('@/lib/prisma')
     const message = await prisma.chatMessage.create({
       data: { conversationId: conversation.id, role, content },
       select: { id: true, role: true, content: true },
