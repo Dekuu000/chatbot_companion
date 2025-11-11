@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { analyticsService } from '@/lib/services/analytics.service'
 import { z } from 'zod'
 
 // Force dynamic rendering - this route should not be statically analyzed during build
@@ -15,6 +14,9 @@ const eventSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // Lazy import analyticsService to prevent Prisma initialization during build
+    const { analyticsService } = await import('@/lib/services/analytics.service')
+    
     const userId = request.headers.get('x-user-id') ?? request.headers.get('x-guest-id') ?? undefined
     const body = await request.json()
     const parsed = eventSchema.parse(body)
