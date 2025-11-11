@@ -551,7 +551,7 @@ export default function ProfilePage() {
                         <div className="flex flex-wrap gap-2">
                           {profile.skills.length > 0 ? (
                             profile.skills.map((skill, idx) => (
-                              <Badge key={idx} variant="primary" size="sm">
+                              <Badge key={idx} variant="default" size="sm">
                                 {skill}
                               </Badge>
                             ))
