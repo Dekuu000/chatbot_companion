@@ -34,14 +34,14 @@ export default function CareerDetailPage() {
   }, [])
 
   useEffect(() => {
-    if (session?.userId && params.id && !hasLoaded) {
+    if (session?.userId && params && params.id && !hasLoaded) {
       loadCareerDetail()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.userId, params.id])
+  }, [session?.userId, params?.id])
 
   const loadCareerDetail = async () => {
-    if (!session?.userId || hasLoaded) return
+    if (!session?.userId || !params?.id || hasLoaded) return
 
     setIsLoading(true)
     setHasLoaded(true)
