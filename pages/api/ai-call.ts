@@ -120,12 +120,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }),
       ]
       if (title) {
-        tx.push(
-          prisma.conversation.updateMany({
-            where: { id, messageCount: 0 },
-            data: { title },
-          })
-        )
+        // Check if this is the first message before updating title
+        const conversation = await prisma.conversation.findUnique({
+          where: { id },
+          select: { messageCount: true },
+        })
+        if (conversation && conversation.messageCount === 0) {
+          tx.push(
+            prisma.conversation.update({
+              where: { id },
+              data: { title },
+            })
+          )
+        }
       }
       tx.push(
         prisma.conversation.update({
