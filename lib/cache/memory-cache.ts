@@ -66,7 +66,7 @@ export class MemoryCache {
    */
   cleanup(): void {
     const now = Date.now()
-    for (const [key, entry] of this.store.entries()) {
+    for (const [key, entry] of Array.from(this.store.entries())) {
       if (entry.expiresAt < now) {
         this.store.delete(key)
       }
@@ -81,7 +81,7 @@ export class MemoryCache {
     let expired = 0
     let active = 0
 
-    for (const entry of this.store.values()) {
+    for (const entry of Array.from(this.store.values())) {
       if (entry.expiresAt < now) {
         expired++
       } else {

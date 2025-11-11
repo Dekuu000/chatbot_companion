@@ -57,16 +57,3 @@ describe('POST /api/auth/login (integration style)', () => {
 		expect(data.session).toEqual({ userId: 'user_1', email: 'valid@example.com', name: 'Demo User' })
 	})
 })
-
-		const req = new Request('http://localhost/api/auth/login', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ email: 'valid@example.com', password: 'Secret123' }),
-		})
-
-		const res: Response = (await (loginRoute as any).POST(req)) as Response
-		expect(res.status).toBe(200)
-		const data = await res.json()
-		expect(data.session).toEqual({ userId: 'user_1', email: 'valid@example.com', name: 'Demo User' })
-	})
-})

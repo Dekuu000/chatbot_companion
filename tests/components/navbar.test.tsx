@@ -19,5 +19,4 @@ describe('Navbar', () => {
 		expect(screen.getByText('Chatbot Companion')).toBeInTheDocument()
 	})
 })
-})
 
