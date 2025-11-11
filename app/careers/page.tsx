@@ -135,17 +135,17 @@ export default function CareersPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-bold text-text-primary mb-2 flex items-center">
-            <Sparkles className="h-10 w-10 text-primary mr-3" />
-            Your Career Matches
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-4 sm:px-0">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-text-primary mb-2 flex items-center flex-wrap gap-2">
+            <Sparkles className="h-8 w-8 sm:h-10 sm:w-10 text-primary" />
+            <span>Your Career Matches</span>
           </h1>
-          <p className="text-text-secondary">
+          <p className="text-sm sm:text-base text-text-secondary">
             Discover career paths tailored to your skills, interests, and goals
           </p>
         </div>
-        <Button onClick={handleGenerateNew} disabled={isGenerating} variant="secondary">
+        <Button onClick={handleGenerateNew} disabled={isGenerating} variant="secondary" className="w-full sm:w-auto flex-shrink-0">
           <Sparkles className="mr-2 h-4 w-4" />
           {isGenerating ? "Generating..." : "Generate New"}
         </Button>
@@ -240,7 +240,7 @@ export default function CareersPage() {
         </div>
       ) : (
         /* Career Cards Grid */
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 px-4 sm:px-0">
           {suggestions
             .sort((a, b) => {
               const scoreA = getMatchScore(a.confidenceScore)

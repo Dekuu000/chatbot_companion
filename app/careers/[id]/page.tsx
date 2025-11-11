@@ -23,28 +23,42 @@ interface CareerDetail {
 export default function CareerDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const session = getSession()
+  const [session, setSession] = useState<ReturnType<typeof getSession> | null>(null)
   const [career, setCareer] = useState<CareerDetail | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [hasLoaded, setHasLoaded] = useState(false)
 
   useEffect(() => {
-    if (session && params.id) {
+    const currentSession = getSession()
+    setSession(currentSession)
+  }, [])
+
+  useEffect(() => {
+    if (session?.userId && params.id && !hasLoaded) {
       loadCareerDetail()
     }
-  }, [session, params.id])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.userId, params.id])
 
   const loadCareerDetail = async () => {
-    if (!session) return
+    if (!session?.userId || hasLoaded) return
 
     setIsLoading(true)
+    setHasLoaded(true)
     try {
-      const response = await fetch(`/api/careers/list?userId=${session.userId}`)
+      const response = await fetch(`/api/careers/list?userId=${session.userId}`, {
+        headers: {
+          'x-user-id': session.userId,
+        },
+      })
       if (response.ok) {
         const data = await response.json()
         const found = data.suggestions?.find((c: CareerDetail) => c.id === params.id)
         if (found) {
           setCareer(found)
         }
+      } else if (response.status === 429) {
+        console.warn('Rate limit exceeded, please wait before retrying')
       }
     } catch (error) {
       console.error("Failed to load career detail:", error)
@@ -239,6 +253,8 @@ export default function CareerDetailPage() {
     </div>
   )
 }
+
+
 
 
 

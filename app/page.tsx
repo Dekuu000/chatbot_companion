@@ -19,18 +19,18 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)]">
       {/* Hero Section */}
-      <div className="text-center max-w-3xl mx-auto mb-16">
-        <h1 className="text-5xl font-bold text-text-primary mb-4">
+      <div className="text-center max-w-3xl mx-auto mb-8 sm:mb-12 md:mb-16 px-4">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-text-primary mb-3 sm:mb-4">
           Discover Your Career Path
         </h1>
-        <p className="text-xl text-text-secondary mb-8">
+        <p className="text-base sm:text-lg md:text-xl text-text-secondary mb-6 sm:mb-8">
           Get personalized career recommendations powered by AI, tailored to your skills, interests, and goals.
         </p>
-        <div className="flex gap-4 justify-center">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
           <Link
             href={careerMatchesHref}
             className={cn(
-              "inline-flex items-center justify-center whitespace-nowrap rounded-2xl text-base font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-12 px-8"
+              "inline-flex items-center justify-center whitespace-nowrap rounded-2xl text-sm sm:text-base font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-11 sm:h-12 px-6 sm:px-8"
             )}
           >
             Career Matches
@@ -39,7 +39,7 @@ export default function Home() {
           <Link
             href="/chat"
             className={cn(
-              "inline-flex items-center justify-center whitespace-nowrap rounded-2xl text-base font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border-2 border-primary text-primary hover:bg-primary/10 h-12 px-8"
+              "inline-flex items-center justify-center whitespace-nowrap rounded-2xl text-sm sm:text-base font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border-2 border-primary text-primary hover:bg-primary/10 h-11 sm:h-12 px-6 sm:px-8"
             )}
           >
             Try Chat
@@ -48,7 +48,7 @@ export default function Home() {
       </div>
 
       {/* Features Grid */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-6xl">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 w-full max-w-6xl px-4">
         <Card className="hover:shadow-medium transition-shadow">
           <CardHeader>
             <Sparkles className="h-10 w-10 text-primary mb-2" />

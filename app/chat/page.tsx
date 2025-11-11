@@ -5,7 +5,7 @@
 'use client'
 
 import { useState, useEffect, useRef, ChangeEvent, useMemo, useCallback } from 'react'
-import { MessageSquare, Send, User, Bot, Copy, Check, Sparkles, Paperclip, X } from 'lucide-react'
+import { MessageSquare, Send, User, Bot, Copy, Check, Sparkles, Paperclip, X, Menu } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -13,6 +13,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import Link from 'next/link'
 import { useSessionContext } from '@/components/providers/session-provider'
+import { useSidebarContext } from '@/components/layout/sidebar-layout'
 import type { ConversationTags } from '@/lib/ai/conversation-state'
 import { describeInterest } from '@/lib/ai/interest-profiles'
 import AdvisorCardMinimal, { type AdvisorResponse } from '@/components/AdvisorCardMinimal'
@@ -57,6 +58,16 @@ export default function ChatPage() {
   const userId = sessionState.user?.userId ?? null
   const isAuthenticated = sessionState.mode === 'authenticated'
   const guestId = sessionState.guestId ?? null
+  
+  // Get sidebar context for mobile toggle
+  let sidebarContext = null
+  try {
+    sidebarContext = useSidebarContext()
+  } catch {
+    // Sidebar context not available (e.g., on non-sidebar pages)
+    sidebarContext = null
+  }
+  const { isMobileSidebarOpen, toggleMobileSidebar } = sidebarContext || { isMobileSidebarOpen: false, toggleMobileSidebar: () => {} }
   const markExistingNavigation = useCallback(() => {
     if (typeof window !== 'undefined') {
       window.sessionStorage.setItem('chat:navigate', 'existing')
@@ -556,19 +567,48 @@ export default function ChatPage() {
       {isAuthenticated ? (
         <div className="border-b border-border bg-card/70 backdrop-blur-sm">
           <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-3 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-start gap-3">
-              <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                Logged in
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-text-primary">Personalized coaching is active.</p>
-                <p className="text-sm text-text-secondary">
-                  {conversationContext?.targetRole
-                    ? `Working toward ${conversationContext.targetRole}. Ask follow-ups to sharpen the roadmap.`
-                    : interestDisplay
-                      ? `Lining up ${interestDisplay} opportunities. Pick a target role so I can lock the next moves around it.`
-                      : 'Tell me your target role so I can shape the roadmap around it.'}
-                </p>
+            <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
+              {/* Mobile Menu Toggle Button */}
+              {sidebarContext && (
+                <Button
+                  data-mobile-menu-button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "flex-shrink-0 md:hidden",
+                    "h-9 w-9 rounded-xl",
+                    "bg-bg-surface/95 backdrop-blur-sm border border-border/60",
+                    "shadow-sm hover:shadow-md",
+                    "hover:bg-muted/80 hover:border-border",
+                    "active:scale-95",
+                    "transition-all duration-200",
+                    "text-text-primary"
+                  )}
+                  onClick={toggleMobileSidebar}
+                  aria-label="Toggle sidebar"
+                >
+                  {isMobileSidebarOpen ? (
+                    <X className="h-4 w-4 transition-transform duration-200" />
+                  ) : (
+                    <Menu className="h-4 w-4 transition-transform duration-200" />
+                  )}
+                </Button>
+              )}
+              
+              <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
+                <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700 flex-shrink-0">
+                  Logged in
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-text-primary">Personalized coaching is active.</p>
+                  <p className="text-sm text-text-secondary">
+                    {conversationContext?.targetRole
+                      ? `Working toward ${conversationContext.targetRole}. Ask follow-ups to sharpen the roadmap.`
+                      : interestDisplay
+                        ? `Lining up ${interestDisplay} opportunities. Pick a target role so I can lock the next moves around it.`
+                        : 'Tell me your target role so I can shape the roadmap around it.'}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -594,7 +634,7 @@ export default function ChatPage() {
                 <p className="text-text-secondary mb-8 max-w-md text-lg">
                   Ask me anything about careers, skills, or job opportunities. I'm here to help you discover your path!
                 </p>
-                <div className="grid md:grid-cols-2 gap-3 max-w-2xl w-full">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl w-full">
                   <button
                     onClick={() => handleSeedPrompt("I like coding. What careers?")}
                     className={cn(
@@ -660,7 +700,7 @@ export default function ChatPage() {
                       )}
                       
                       <div className={cn(
-                        "flex flex-col gap-1 max-w-[75%] md:max-w-[70%]",
+                        "flex flex-col gap-1 max-w-[85%] sm:max-w-[75%] md:max-w-[70%]",
                         isUser && 'items-end'
                       )}>
                         <div
@@ -810,7 +850,7 @@ export default function ChatPage() {
 
       {/* Input Area */}
       <div className="fixed inset-x-0 md:left-64 bottom-0 z-20 border-t border-border bg-gradient-to-b from-bg via-bg/95 to-bg/85 backdrop-blur-md">
-        <div className="max-w-4xl mx-auto w-full px-4 pb-6 pt-4 sm:px-6">
+        <div className="max-w-4xl mx-auto w-full px-3 sm:px-4 pb-4 sm:pb-6 pt-3 sm:pt-4">
           <form onSubmit={handleSend} className="relative space-y-3">
             <input
               ref={fileInputRef}
@@ -926,18 +966,18 @@ export default function ChatPage() {
               <p className="px-1 text-sm text-red-500">{attachmentError}</p>
             )}
             {authPromptVisible && (
-              <div className="px-3 py-3 rounded-2xl border border-border bg-card/80 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                <div>
+              <div className="px-3 py-3 rounded-2xl border border-border bg-card/80 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-text-primary">Sign in to access premium tools</p>
-                  <p className="text-sm text-text-secondary">
+                  <p className="text-xs sm:text-sm text-text-secondary mt-1">
                     Upload resumes, save chats, get career matches, and practice interviews with a free account.
                   </p>
                 </div>
-                <div className="flex gap-2">
-                  <Button asChild variant="outline" size="sm">
+                <div className="flex flex-col sm:flex-row gap-2 sm:flex-shrink-0">
+                  <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
                     <Link href="/login">Sign In</Link>
                   </Button>
-                  <Button asChild size="sm">
+                  <Button asChild size="sm" className="w-full sm:w-auto">
                     <Link href="/signup">Sign Up</Link>
                   </Button>
                 </div>

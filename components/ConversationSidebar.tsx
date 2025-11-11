@@ -3,12 +3,16 @@
 import { useEffect, useState, useCallback, type MouseEvent } from 'react'
 import Link from 'next/link'
 import { usePathname, useSearchParams, useRouter } from 'next/navigation'
-import { Plus, Trash2, MessageSquare, FileText, GraduationCap, LogOut, ChevronDown, Sparkles } from 'lucide-react'
+import { Plus, Trash2, MessageSquare, FileText, GraduationCap, LogOut, ChevronDown, Sparkles, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useSessionContext } from '@/components/providers/session-provider'
 
-export default function ConversationSidebar() {
+interface ConversationSidebarProps {
+  onClose?: () => void
+}
+
+export default function ConversationSidebar({ onClose }: ConversationSidebarProps) {
   const { state, signOut } = useSessionContext()
   const [conversations, setConversations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -204,22 +208,42 @@ export default function ConversationSidebar() {
   }
 
   return (
-    <aside className="h-full flex flex-col bg-bg-surface border-r border-border">
-      <div className="p-3 border-b border-border">
-        <Link href="/" className="group flex items-center gap-2 rounded-lg px-2 py-2 transition-colors hover:bg-muted">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Sparkles className="h-4 w-4" />
-          </div>
-          <span className="text-base font-semibold text-text-primary transition-colors group-hover:text-primary">
-            Career Explorer
-          </span>
-          <ChevronDown className="ml-auto h-4 w-4 text-text-secondary opacity-0 transition-opacity group-hover:opacity-100" />
-        </Link>
+    <aside className="h-full flex flex-col bg-bg-surface border-r border-border w-full md:w-72">
+      <div className="p-2 sm:p-3 border-b border-border">
+        <div className="flex items-center gap-2">
+          <Link href="/" onClick={() => onClose?.()} className="group flex flex-1 items-center gap-2 rounded-lg px-2 py-2 transition-colors hover:bg-muted">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <Sparkles className="h-4 w-4" />
+            </div>
+            <span className="text-base font-semibold text-text-primary transition-colors group-hover:text-primary">
+              Career Explorer
+            </span>
+            <ChevronDown className="ml-auto h-4 w-4 text-text-secondary opacity-0 transition-opacity group-hover:opacity-100" />
+          </Link>
+          {onClose && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "h-8 w-8 flex-shrink-0 md:hidden",
+                "rounded-lg",
+                "hover:bg-muted"
+              )}
+              onClick={onClose}
+              aria-label="Close sidebar"
+            >
+              <X className="h-4 w-4 text-text-secondary" />
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="p-3 border-b border-border">
         <Button
-          onClick={handleNewConversation}
+          onClick={() => {
+            handleNewConversation()
+            onClose?.()
+          }}
           className="w-full justify-start gap-2 bg-bg text-text-primary font-medium hover:bg-muted"
           variant="ghost"
           disabled={creating}
@@ -229,7 +253,7 @@ export default function ConversationSidebar() {
         </Button>
       </div>
 
-      <div className="px-3 py-2 border-b border-border">
+      <div className="px-2 sm:px-3 py-2 border-b border-border">
         <nav className="space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon
@@ -238,6 +262,7 @@ export default function ConversationSidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => onClose?.()}
                 className={cn(
                   'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                   isActive ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:bg-muted hover:text-text-primary'
@@ -252,10 +277,10 @@ export default function ConversationSidebar() {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="px-3 py-2">
-          <h2 className="px-3 text-xs font-semibold uppercase tracking-wider text-text-secondary">Recent</h2>
+        <div className="px-2 sm:px-3 py-2">
+          <h2 className="px-2 sm:px-3 text-xs font-semibold uppercase tracking-wider text-text-secondary">Recent</h2>
         </div>
-        <div className="flex-1 overflow-y-auto px-3 pb-3">
+        <div className="flex-1 overflow-y-auto px-2 sm:px-3 pb-3">
           {loading ? (
             <div className="px-3 py-2 text-xs text-text-secondary">Loading...</div>
           ) : conversations.length === 0 ? (
@@ -270,7 +295,10 @@ export default function ConversationSidebar() {
                     <div className="flex items-center gap-1">
                            <Link
                         href={`/chat?c=${conversation.id}`}
-                             onClick={() => markExistingNavigation()}
+                             onClick={() => {
+                               markExistingNavigation()
+                               onClose?.()
+                             }}
                         className={cn(
                           'flex-1 truncate rounded-lg px-3 py-2 text-sm transition-colors',
                           isActive ? 'bg-primary/10 text-primary font-medium' : 'text-text-secondary hover:bg-muted hover:text-text-primary'
@@ -297,22 +325,22 @@ export default function ConversationSidebar() {
         </div>
       </div>
 
-      <div className="border-t border-border p-3">
-        <div className="group flex items-center gap-2">
-          <Link href="/profile" className="flex flex-1 items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-muted">
-            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+      <div className="border-t border-border p-2 sm:p-3">
+        <div className="group flex items-center gap-1">
+          <Link href="/profile" onClick={() => onClose?.()} className="flex flex-1 items-center gap-2 sm:gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-muted min-w-0">
+            <div className="flex h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs sm:text-sm font-semibold text-primary">
               {(session.name || session.email || 'U').charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-medium text-text-primary">{session.name || session.email || 'User'}</div>
-              {session.email ? <div className="truncate text-xs text-text-secondary">{session.email}</div> : null}
+              <div className="truncate text-xs sm:text-sm font-medium text-text-primary">{session.name || session.email || 'User'}</div>
+              {session.email ? <div className="truncate text-[10px] sm:text-xs text-text-secondary">{session.email}</div> : null}
             </div>
           </Link>
           <Button
             variant="ghost"
             size="sm"
             onClick={handleLogout}
-            className="h-8 w-8 flex-shrink-0 p-0 opacity-0 transition-opacity group-hover:opacity-100"
+            className="h-8 w-8 flex-shrink-0 p-0 -ml-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
             title="Sign out"
           >
             <LogOut className="h-4 w-4 text-text-secondary" />

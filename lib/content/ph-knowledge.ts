@@ -306,4 +306,14 @@ export function listLearningTracks(role: string | null | undefined): Array<{ tit
   return insight?.learningTracks ?? []
 }
 
+export function listRoleInsights(): RoleInsight[] {
+  return ROLE_INSIGHTS.map((insight) => ({
+    ...insight,
+    hiringHotspots: [...insight.hiringHotspots],
+    topEmployers: [...insight.topEmployers],
+    interviewFocus: [...insight.interviewFocus],
+    recommendedProjects: [...insight.recommendedProjects],
+    learningTracks: insight.learningTracks.map((track) => ({ ...track })),
+  }))
+}
 

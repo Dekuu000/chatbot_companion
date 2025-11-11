@@ -34,4 +34,3 @@ export function shouldUseAdvisorFlow(message: string): boolean {
 
   return true
 }
-

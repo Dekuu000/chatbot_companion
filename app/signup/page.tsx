@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { HiSparkles } from 'react-icons/hi2'
 import Link from 'next/link'
-import { clearSession, setSession } from '@/lib/session'
+import { clearSession } from '@/lib/session'
+import { useSessionContext } from '@/components/providers/session-provider'
 import { Eye, EyeOff } from 'lucide-react'
 
 export default function SignupPage() {
@@ -16,6 +17,7 @@ export default function SignupPage() {
   const [error, setError] = useState('')
   const router = useRouter()
   const [resettingSession, setResettingSession] = useState(true)
+  const { setAuthenticatedSession } = useSessionContext()
 
   useEffect(() => {
     clearSession()
@@ -54,20 +56,11 @@ export default function SignupPage() {
         throw new Error(data.error || 'Sign up failed')
       }
 
-      const sessionResponse = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: email.trim(), password }),
+      setAuthenticatedSession({
+        userId: data.session.userId,
+        email: data.session.email,
+        name: data.session.name,
       })
-
-      if (!sessionResponse.ok) {
-        throw new Error('Sign up succeeded but auto-login failed. Please log in manually.')
-      }
-
-      const sessionData = await sessionResponse.json()
-      setSession({ userId: sessionData.session.userId, email: sessionData.session.email, name: sessionData.session.name })
 
       router.push('/chat')
       router.refresh()
@@ -84,14 +77,14 @@ export default function SignupPage() {
         <div className="text-gray-600 dark:text-gray-300">Preparing sign-up…</div>
       </div>
     ) : (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center px-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8 max-w-md w-full">
-        <div className="text-center mb-8">
-          <HiSparkles className="h-12 w-12 text-indigo-600 mx-auto mb-4" />
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center px-4 py-8">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 sm:p-8 max-w-md w-full">
+        <div className="text-center mb-6 sm:mb-8">
+          <HiSparkles className="h-10 w-10 sm:h-12 sm:w-12 text-indigo-600 mx-auto mb-3 sm:mb-4" />
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
             Create your account
           </h1>
-          <p className="text-gray-600 dark:text-gray-300">
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">
             Sign up with your email to unlock personalized career guidance.
           </p>
         </div>
@@ -186,6 +179,9 @@ export default function SignupPage() {
     </div>
   ))
 }
+
+
+
 
 
 

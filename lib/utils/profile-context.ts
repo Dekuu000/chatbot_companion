@@ -76,10 +76,3 @@ export function buildBriefProfileContext(profile: Profile | null): string {
   return buildProfileContext(profile, { format: 'brief', includeGoals: true })
 }
 
-
-
-
-
-
-
-

@@ -4,12 +4,12 @@
 
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { HiSparkles } from 'react-icons/hi2'
 import Link from 'next/link'
-import { getSession, setSession } from '@/lib/session'
 import { Eye, EyeOff } from 'lucide-react'
+import { useSessionContext } from '@/components/providers/session-provider'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -19,18 +19,18 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { setAuthenticatedSession, state: sessionState, status: sessionStatus } = useSessionContext()
   const redirectParam = searchParams.get('redirect')
   const redirect = redirectParam && redirectParam.startsWith('/chat') ? redirectParam : '/chat'
-  const [checkingSession, setCheckingSession] = useState(true)
+  const isSessionReady = sessionStatus === 'ready'
+  const isAuthenticated = sessionState.mode === 'authenticated'
+  const checkingSession = useMemo(() => !isSessionReady || isAuthenticated, [isAuthenticated, isSessionReady])
 
   useEffect(() => {
-    const current = getSession()
-    if (current?.userId) {
-      router.replace(redirect)
-    } else {
-      setCheckingSession(false)
-    }
-  }, [redirect, router])
+    if (!isSessionReady) return
+    if (!isAuthenticated) return
+    router.replace(redirect)
+  }, [isAuthenticated, isSessionReady, redirect, router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -57,10 +57,13 @@ export default function LoginPage() {
         throw new Error(data.error || 'Login failed')
       }
 
-      // Store session
-      setSession({ userId: data.session.userId, email: data.session.email, name: data.session.name })
+      setAuthenticatedSession({
+        userId: data.session.userId,
+        email: data.session.email,
+        name: data.session.name,
+      })
 
-      router.push(redirect)
+      router.replace(redirect)
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
@@ -75,14 +78,14 @@ export default function LoginPage() {
         <div className="text-gray-600 dark:text-gray-300">Preparing sign-in…</div>
       </div>
     ) : (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center px-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8 max-w-md w-full">
-        <div className="text-center mb-8">
-          <HiSparkles className="h-12 w-12 text-indigo-600 mx-auto mb-4" />
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center px-4 py-8">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 sm:p-8 max-w-md w-full">
+        <div className="text-center mb-6 sm:mb-8">
+          <HiSparkles className="h-10 w-10 sm:h-12 sm:w-12 text-indigo-600 mx-auto mb-3 sm:mb-4" />
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
             Welcome back
           </h1>
-          <p className="text-gray-600 dark:text-gray-300">
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">
             Sign in with your email and password to continue exploring careers.
           </p>
         </div>

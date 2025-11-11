@@ -84,10 +84,3 @@ export function isValidUsername(username: string): boolean {
   return usernameRegex.test(username.trim())
 }
 
-
-
-
-
-
-
-

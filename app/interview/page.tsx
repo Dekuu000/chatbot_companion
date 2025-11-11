@@ -9,8 +9,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
-import { Briefcase, Clock, CheckCircle2, AlertCircle, TrendingUp, Play, RotateCcw, ArrowRight } from "lucide-react"
+import { Briefcase, Clock, CheckCircle2, AlertCircle, TrendingUp, Play, RotateCcw, ArrowRight, Menu, X } from "lucide-react"
 import { getSession } from "@/lib/session"
+import { useSidebarContext } from "@/components/layout/sidebar-layout"
+import { cn } from "@/lib/utils"
 import Link from "next/link"
 import ReactMarkdown from "react-markdown"
 import { stripInternalThought } from "@/lib/ai/chat-response"
@@ -52,6 +54,16 @@ export default function InterviewPage() {
   const [isScoring, setIsScoring] = useState(false)
   const [showResults, setShowResults] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Get sidebar context for mobile toggle
+  let sidebarContext = null
+  try {
+    sidebarContext = useSidebarContext()
+  } catch {
+    // Sidebar context not available (e.g., on non-sidebar pages)
+    sidebarContext = null
+  }
+  const { isMobileSidebarOpen, toggleMobileSidebar } = sidebarContext || { isMobileSidebarOpen: false, toggleMobileSidebar: () => {} }
 
   useEffect(() => {
     setSession(getSession())
@@ -291,10 +303,40 @@ export default function InterviewPage() {
 
   if (!sessionData) {
     return (
-      <div className="max-w-2xl mx-auto space-y-8">
-        <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold text-text-primary">Mock Interview</h1>
-          <p className="text-text-secondary">Practice with AI-generated interview questions</p>
+      <div className="max-w-2xl mx-auto space-y-6 sm:space-y-8 px-4 sm:px-6">
+        <div className="space-y-2">
+          {/* Mobile Menu Toggle */}
+          {sidebarContext && (
+            <div className="flex items-center gap-2 sm:gap-3 mb-4 md:hidden">
+              <Button
+                data-mobile-menu-button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "flex-shrink-0",
+                  "h-9 w-9 rounded-xl",
+                  "bg-bg-surface/95 backdrop-blur-sm border border-border/60",
+                  "shadow-sm hover:shadow-md",
+                  "hover:bg-muted/80 hover:border-border",
+                  "active:scale-95",
+                  "transition-all duration-200",
+                  "text-text-primary"
+                )}
+                onClick={toggleMobileSidebar}
+                aria-label="Toggle sidebar"
+              >
+                {isMobileSidebarOpen ? (
+                  <X className="h-4 w-4 transition-transform duration-200" />
+                ) : (
+                  <Menu className="h-4 w-4 transition-transform duration-200" />
+                )}
+              </Button>
+            </div>
+          )}
+          <div className="text-center space-y-2">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-text-primary">Mock Interview</h1>
+            <p className="text-sm sm:text-base text-text-secondary">Practice with AI-generated interview questions</p>
+          </div>
         </div>
 
         <Card>
@@ -321,7 +363,7 @@ export default function InterviewPage() {
 
             <div className="space-y-2">
               <Label>Difficulty Level</Label>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4">
                 {(["easy", "medium", "hard"] as const).map((level) => (
                   <Button
                     key={level}
@@ -359,10 +401,40 @@ export default function InterviewPage() {
 
   if (showResults && sessionData.overallScore !== undefined) {
     return (
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold text-text-primary">Interview Results</h1>
-          <p className="text-text-secondary">Your performance analysis</p>
+      <div className="max-w-4xl mx-auto space-y-6 px-4 sm:px-6">
+        <div className="space-y-2">
+          {/* Mobile Menu Toggle */}
+          {sidebarContext && (
+            <div className="flex items-center gap-2 sm:gap-3 mb-4 md:hidden">
+              <Button
+                data-mobile-menu-button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "flex-shrink-0",
+                  "h-9 w-9 rounded-xl",
+                  "bg-bg-surface/95 backdrop-blur-sm border border-border/60",
+                  "shadow-sm hover:shadow-md",
+                  "hover:bg-muted/80 hover:border-border",
+                  "active:scale-95",
+                  "transition-all duration-200",
+                  "text-text-primary"
+                )}
+                onClick={toggleMobileSidebar}
+                aria-label="Toggle sidebar"
+              >
+                {isMobileSidebarOpen ? (
+                  <X className="h-4 w-4 transition-transform duration-200" />
+                ) : (
+                  <Menu className="h-4 w-4 transition-transform duration-200" />
+                )}
+              </Button>
+            </div>
+          )}
+          <div className="text-center space-y-2">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-text-primary">Interview Results</h1>
+            <p className="text-sm sm:text-base text-text-secondary">Your performance analysis</p>
+          </div>
         </div>
 
         <Card>
@@ -423,7 +495,7 @@ export default function InterviewPage() {
                           <p className="text-sm text-text-primary">
                             <span className="font-semibold">Coaching Note:</span> {sessionData.scoreDetails[idx].feedback}
                           </p>
-                          <div className="mt-3 grid gap-3 md:grid-cols-2">
+                          <div className="mt-3 grid gap-3 grid-cols-1 sm:grid-cols-2">
                             {sessionData.scoreDetails[idx].strengths?.length > 0 && (
                               <div className="space-y-2">
                                 <p className="text-xs font-semibold uppercase tracking-wide text-primary">Strengths</p>
@@ -484,21 +556,51 @@ export default function InterviewPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-text-primary">{sessionData.jobTitle}</h1>
-          <div className="flex items-center gap-2 mt-2">
-            <Badge variant="outline">{sessionData.difficulty}</Badge>
-            <span className="text-sm text-text-secondary">
-              Question {currentQuestion + 1} of {sessionData.questions.length}
-            </span>
+    <div className="max-w-3xl mx-auto space-y-6 px-4 sm:px-6">
+      <div className="space-y-4">
+        {/* Mobile Menu Toggle */}
+        {sidebarContext && (
+          <div className="flex items-center gap-2 sm:gap-3 md:hidden">
+            <Button
+              data-mobile-menu-button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "flex-shrink-0",
+                "h-9 w-9 rounded-xl",
+                "bg-bg-surface/95 backdrop-blur-sm border border-border/60",
+                "shadow-sm hover:shadow-md",
+                "hover:bg-muted/80 hover:border-border",
+                "active:scale-95",
+                "transition-all duration-200",
+                "text-text-primary"
+              )}
+              onClick={toggleMobileSidebar}
+              aria-label="Toggle sidebar"
+            >
+              {isMobileSidebarOpen ? (
+                <X className="h-4 w-4 transition-transform duration-200" />
+              ) : (
+                <Menu className="h-4 w-4 transition-transform duration-200" />
+              )}
+            </Button>
           </div>
+        )}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-text-primary">{sessionData.jobTitle}</h1>
+            <div className="flex items-center gap-2 mt-2">
+              <Badge variant="outline">{sessionData.difficulty}</Badge>
+              <span className="text-sm text-text-secondary">
+                Question {currentQuestion + 1} of {sessionData.questions.length}
+              </span>
+            </div>
+          </div>
+          <Button variant="ghost" size="sm" onClick={handleReset}>
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Reset
+          </Button>
         </div>
-        <Button variant="ghost" size="sm" onClick={handleReset}>
-          <RotateCcw className="h-4 w-4 mr-2" />
-          Reset
-        </Button>
       </div>
 
       <div className="space-y-2">

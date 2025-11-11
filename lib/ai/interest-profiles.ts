@@ -66,5 +66,3 @@ export function describeInterest(interestKey?: string | null): string | null {
   return profile ? profile.label : null
 }
 
-
-

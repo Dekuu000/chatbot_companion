@@ -56,10 +56,3 @@ export function withErrorHandling<T extends NextRequest>(
   }
 }
 
-
-
-
-
-
-
-

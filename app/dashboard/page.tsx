@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { getSession } from "@/lib/session"
 import { cn } from "@/lib/utils"
+import { useSidebarContext } from "@/components/layout/sidebar-layout"
 import {
   Sparkles,
   Bookmark,
@@ -29,6 +30,8 @@ import {
   CalendarCheck,
   ListChecks,
   Lightbulb,
+  Menu,
+  X,
   type LucideIcon,
 } from "lucide-react"
 
@@ -240,6 +243,16 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<DashboardTab>("matches")
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
+  // Get sidebar context for mobile toggle
+  let sidebarContext = null
+  try {
+    sidebarContext = useSidebarContext()
+  } catch {
+    // Sidebar context not available (e.g., on non-sidebar pages)
+    sidebarContext = null
+  }
+  const { isMobileSidebarOpen, toggleMobileSidebar } = sidebarContext || { isMobileSidebarOpen: false, toggleMobileSidebar: () => {} }
+
   const handleResumeChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -318,6 +331,91 @@ export default function DashboardPage() {
       setIsOverviewLoading(false)
     }
   }, [session?.userId, loadOverview])
+
+  const analyticsHeaders = useMemo(() => {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    }
+    if (session?.userId) {
+      headers["x-user-id"] = session.userId
+    }
+    return headers
+  }, [session?.userId])
+
+  const logDashboardEvent = useCallback(
+    async (action: string, metadata?: Record<string, unknown>) => {
+      try {
+        await fetch("/api/analytics/events", {
+          method: "POST",
+          headers: analyticsHeaders,
+          body: JSON.stringify({ action, metadata }),
+        })
+      } catch (error) {
+        if (process.env.NODE_ENV !== "production") {
+          console.debug("analytics_event_skip", error)
+        }
+      }
+    },
+    [analyticsHeaders]
+  )
+
+  const nextRecommendedActions = useMemo(() => {
+    if (!overview) return []
+
+    const actions: QuickAction[] = []
+
+    if (!overview.focusContext?.targetRole) {
+      actions.push({
+        id: "define-target-role",
+        title: "Set your target role",
+        description: "Capture the role you’re aiming for so the coach can align every recommendation.",
+        icon: Target,
+        href: "/profile?section=goals",
+      })
+    }
+
+    if (overview.profileCompletion.percent < 80 || overview.profileCompletion.missingSections.length > 0) {
+      actions.push({
+        id: "profile-completion",
+        title: "Complete your profile",
+        description: "Add skills, interests, and goals to unlock sharper coaching.",
+        icon: ListChecks,
+        href: "/profile",
+      })
+    }
+
+    if (!overview.resumeInsights) {
+      actions.push({
+        id: "resume-upload",
+        title: "Upload your resume",
+        description: "Get AI feedback and align it with your top target roles.",
+        icon: FileText,
+        href: "/resume",
+      })
+    }
+
+    if (overview.suggestions.length === 0) {
+      actions.push({
+        id: "generate-matches",
+        title: "Generate career matches",
+        description: "Pull fresh AI suggestions tailored to your latest profile.",
+        icon: Sparkles,
+        href: "#career-matches",
+      })
+    }
+
+    if (overview.interviews.length === 0) {
+      actions.push({
+        id: "schedule-interview",
+        title: "Schedule a mock interview",
+        description: "Practice your storytelling so you’re ready when recruiters call.",
+        icon: CalendarCheck,
+        href: "/interview",
+      })
+    }
+
+    return actions.slice(0, 3)
+  }, [overview])
 
   if (!isSessionReady) {
     return (
@@ -402,8 +500,9 @@ export default function DashboardPage() {
     )
   }
 
-  const matches = overview?.suggestions ?? []
-  const topActivity = overview?.activity.slice(0, 5) ?? []
+  const matches = [...(overview?.suggestions ?? [])].sort(
+    (a, b) => (b.confidenceScore ?? 0) - (a.confidenceScore ?? 0)
+  )
 
   const quickActions: QuickAction[] = [
     {
@@ -421,7 +520,10 @@ export default function DashboardPage() {
       title: "Get AI career suggestions",
       description: "Generate fresh matches tailored to your goals.",
       icon: Sparkles,
-      onClick: handleGenerate,
+      onClick: () => {
+        void handleGenerate()
+        setActiveTab("matches")
+      },
       disabled: isGenerating,
     },
     {
@@ -447,89 +549,6 @@ export default function DashboardPage() {
     },
   ]
 
-  const nextRecommendedActions = useMemo(() => {
-    if (!overview) return []
-
-    const actions: QuickAction[] = []
-
-    if (!overview.focusContext?.targetRole) {
-      actions.push({
-        id: "define-target-role",
-        title: "Set your target role",
-        description: "Capture the role you’re aiming for so the coach can align every recommendation.",
-        icon: Target,
-        href: "/profile?section=goals",
-      })
-    }
-
-    if (overview.profileCompletion.percent < 80 || overview.profileCompletion.missingSections.length > 0) {
-      actions.push({
-        id: "profile-completion",
-        title: "Complete your profile",
-        description: "Add skills, interests, and goals to unlock sharper coaching.",
-        icon: ListChecks,
-        href: "/profile",
-      })
-    }
-
-    if (!overview.resumeInsights) {
-      actions.push({
-        id: "resume-upload",
-        title: "Upload your resume",
-        description: "Get AI feedback and align it with your top target roles.",
-        icon: FileText,
-        href: "/resume",
-      })
-    }
-
-    if (overview.suggestions.length === 0) {
-      actions.push({
-        id: "generate-matches",
-        title: "Generate career matches",
-        description: "Pull fresh AI suggestions tailored to your latest profile.",
-        icon: Sparkles,
-        href: "#career-matches",
-      })
-    }
-
-    if (overview.interviews.length === 0) {
-      actions.push({
-        id: "schedule-interview",
-        title: "Schedule a mock interview",
-        description: "Practice your storytelling so you’re ready when recruiters call.",
-        icon: CalendarCheck,
-        href: "/interview",
-      })
-    }
-
-    return actions.slice(0, 3)
-  }, [overview])
-  const analyticsHeaders = useMemo(() => {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    }
-    if (session?.userId) {
-      headers["x-user-id"] = session.userId
-    }
-    return headers
-  }, [session?.userId])
-  const logDashboardEvent = useCallback(
-    async (action: string, metadata?: Record<string, unknown>) => {
-      try {
-        await fetch("/api/analytics/events", {
-          method: "POST",
-          headers: analyticsHeaders,
-          body: JSON.stringify({ action, metadata }),
-        })
-      } catch (error) {
-        if (process.env.NODE_ENV !== "production") {
-          console.debug("analytics_event_skip", error)
-        }
-      }
-    },
-    [analyticsHeaders]
-  )
-
   if (isOverviewLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -543,18 +562,47 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8 pb-16">
+      {/* Header with Mobile Menu Toggle */}
+      {sidebarContext && (
+        <div className="flex items-center gap-2 sm:gap-3 mb-4 md:hidden">
+          <Button
+            data-mobile-menu-button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "flex-shrink-0",
+              "h-9 w-9 rounded-xl",
+              "bg-bg-surface/95 backdrop-blur-sm border border-border/60",
+              "shadow-sm hover:shadow-md",
+              "hover:bg-muted/80 hover:border-border",
+              "active:scale-95",
+              "transition-all duration-200",
+              "text-text-primary"
+            )}
+            onClick={toggleMobileSidebar}
+            aria-label="Toggle sidebar"
+          >
+            {isMobileSidebarOpen ? (
+              <X className="h-4 w-4 transition-transform duration-200" />
+            ) : (
+              <Menu className="h-4 w-4 transition-transform duration-200" />
+            )}
+          </Button>
+        </div>
+      )}
+
       {/* Greeting and Completion */}
       <Card className="border-border/60 bg-gradient-to-br from-background via-background to-primary/5">
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <CardTitle className="text-2xl sm:text-3xl font-semibold text-text-primary">
+          <div className="flex-1 min-w-0">
+            <CardTitle className="text-xl sm:text-2xl md:text-3xl font-semibold text-text-primary">
               Welcome back, {overview?.greetingName || "explorer"} 👋
             </CardTitle>
-            <CardDescription className="text-base">
-              Let’s keep momentum—your personalised career plan updates in real time.
+            <CardDescription className="text-sm sm:text-base mt-1">
+              Let's keep momentum—your personalised career plan updates in real time.
             </CardDescription>
           </div>
-          <Button asChild variant="outline">
+          <Button asChild variant="outline" className="w-full sm:w-auto flex-shrink-0">
             <Link href="/profile">
               Review profile
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -666,7 +714,7 @@ export default function DashboardPage() {
             className="resize-none"
             disabled={isGenerating}
           />
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
             <input
               ref={fileInputRef}
               type="file"
@@ -730,7 +778,7 @@ export default function DashboardPage() {
       )}
 
       {/* Stats summary */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={Sparkles}
           label="Career matches"
@@ -757,16 +805,16 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[3fr,2fr]">
+      <div className="grid gap-6 lg:grid-cols-[3fr,2fr] xl:grid-cols-[2fr,1fr]">
         {/* Main column */}
         <div className="space-y-6">
           <Card>
             <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <CardTitle>Career Explorer</CardTitle>
-                <CardDescription>Navigate your matches, resume insights, interviews, and learning plan.</CardDescription>
+              <div className="flex-1 min-w-0">
+                <CardTitle className="text-lg sm:text-xl">Career Explorer</CardTitle>
+                <CardDescription className="text-sm">Navigate your matches, resume insights, interviews, and learning plan.</CardDescription>
               </div>
-              <div className="flex flex-wrap gap-2 text-sm">
+              <div className="flex flex-wrap gap-2 text-xs sm:text-sm">
                 {TAB_OPTIONS.map((tab) => (
                   <button
                     key={tab.id}
@@ -800,7 +848,7 @@ export default function DashboardPage() {
               <CardTitle>Next best actions</CardTitle>
               <CardDescription>Stay in motion with guided tasks designed for quick wins.</CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
+            <CardContent className="grid gap-4 sm:grid-cols-2">
               {quickActions.map((action) => {
                 const Icon = action.icon
                 const ButtonContent = (
@@ -855,79 +903,6 @@ export default function DashboardPage() {
 
         {/* Secondary column */}
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent activity</CardTitle>
-              <CardDescription>Pick up where you left off across chats, resumes, and practice sessions.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {topActivity.length === 0 && (
-                <p className="text-sm text-text-secondary">No recent events yet. Generate matches or upload a resume to get started.</p>
-              )}
-              {topActivity.map((activity) => (
-                <div key={activity.id} className="flex items-start gap-3 rounded-xl border border-border/60 bg-card/80 p-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <ActivityIcon type={activity.type} />
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium text-text-primary">{activity.title}</p>
-                    {activity.description && (
-                      <p className="text-xs text-text-secondary line-clamp-2">{activity.description}</p>
-                    )}
-                    <div className="flex items-center gap-2 text-xs text-text-tertiary">
-                      <Clock className="h-3.5 w-3.5" />
-                      <span>{formatRelativeTime(activity.timestamp)}</span>
-                    </div>
-                  </div>
-                  {activity.href && (
-                    <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-text-secondary hover:text-text-primary">
-                      <Link href={activity.href}>
-                        <ArrowUpRight className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Your coach recommends</CardTitle>
-              <CardDescription>Fresh ideas curated from your recent activity and profile.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {overview?.coachTips.map((tip) => (
-                <div key={tip.id} className="rounded-xl border border-border/60 bg-card/80 p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="rounded-full bg-primary/10 p-2 text-primary">
-                      <Lightbulb className="h-4 w-4" />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-semibold text-text-primary">{tip.title}</h3>
-                        {typeof tip.priority === "number" && (
-                          <Badge variant="outline" className="text-xs">
-                            Priority {tip.priority}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-text-secondary">{tip.description}</p>
-                      {tip.actionUrl && (
-                        <Button asChild size="sm" variant="ghost" className="h-auto px-0 text-primary">
-                          <Link href={tip.actionUrl}>
-                            {tip.actionText ?? "View recommendation"}
-                            <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-                          </Link>
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
           <Card>
             <CardHeader>
               <CardTitle>Profile checklist</CardTitle>
@@ -1040,7 +1015,7 @@ function renderTabContent(tab: DashboardTab, overview: DashboardOverview | null,
     }
 
     return (
-      <div id="career-matches" className="grid gap-4 md:grid-cols-2">
+      <div id="career-matches" className="grid gap-4 sm:grid-cols-1 md:grid-cols-2">
         {matches.map((match) => {
           const matchScore = getMatchScore(match.confidenceScore)
           return (
@@ -1062,6 +1037,9 @@ function renderTabContent(tab: DashboardTab, overview: DashboardOverview | null,
                     </span>
                   ))}
                 </div>
+                {match.nextSteps && (
+                  <p className="text-xs text-text-secondary line-clamp-2 italic">{match.nextSteps}</p>
+                )}
                 {match.salaryGuideline && (
                   <div className="flex items-center gap-2 text-sm text-text-secondary">
                     <BarChart3 className="h-4 w-4 text-primary" />
@@ -1132,7 +1110,7 @@ function renderTabContent(tab: DashboardTab, overview: DashboardOverview | null,
         {insights.strengths && insights.strengths.length > 0 && (
           <div className="space-y-2">
             <h4 className="text-sm font-semibold text-text-primary uppercase">Strengths</h4>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2 grid-cols-1 sm:grid-cols-2">
               {insights.strengths.map((item, idx) => (
                 <div key={idx} className="flex items-start gap-2 rounded-xl border border-green-500/30 bg-green-500/5 p-3 text-sm text-green-700">
                   <CheckCircle2 className="mt-0.5 h-4 w-4 flex-none" />
@@ -1253,7 +1231,7 @@ function renderTabContent(tab: DashboardTab, overview: DashboardOverview | null,
     }
 
     return (
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
         {overview.learningResources.map((resource) => (
           <Card key={resource.id} className="border-border/70 bg-card/80">
             <CardContent className="space-y-3 p-4">

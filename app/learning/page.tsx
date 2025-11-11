@@ -37,31 +37,45 @@ interface LearningPath {
 }
 
 export default function LearningPage() {
-  const session = getSession()
+  const [session, setSession] = useState<ReturnType<typeof getSession> | null>(null)
   const [paths, setPaths] = useState<LearningPath[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedPath, setSelectedPath] = useState<LearningPath | null>(null)
+  const [hasLoaded, setHasLoaded] = useState(false)
 
   useEffect(() => {
-    if (session) {
+    const currentSession = getSession()
+    setSession(currentSession)
+  }, [])
+
+  useEffect(() => {
+    if (session?.userId && !hasLoaded) {
       loadLearningPaths()
-    } else {
+    } else if (!session) {
       setIsLoading(false)
     }
-  }, [session])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.userId])
 
   const loadLearningPaths = async () => {
-    if (!session) return
+    if (!session?.userId || hasLoaded) return
 
     setIsLoading(true)
+    setHasLoaded(true)
     try {
-      const response = await fetch(`/api/learning/paths?userId=${session.userId}`)
+      const response = await fetch(`/api/learning/paths?userId=${session.userId}`, {
+        headers: {
+          'x-user-id': session.userId,
+        },
+      })
       if (response.ok) {
         const data = await response.json()
         setPaths(data.paths || [])
         if (data.paths && data.paths.length > 0) {
           setSelectedPath(data.paths[0])
         }
+      } else if (response.status === 429) {
+        console.warn('Rate limit exceeded, please wait before retrying')
       }
     } catch (error) {
       console.error("Failed to load learning paths:", error)
@@ -76,7 +90,10 @@ export default function LearningPage() {
     try {
       const response = await fetch("/api/learning/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": session.userId,
+        },
         body: JSON.stringify({
           userId: session.userId,
           careerGoal: "Software Engineer", // This should come from user selection
@@ -84,8 +101,8 @@ export default function LearningPage() {
       })
 
       if (response.ok) {
-        const data = await response.json()
-        loadLearningPaths()
+        setHasLoaded(false) // Reset to allow reload
+        await loadLearningPaths()
       }
     } catch (error) {
       console.error("Failed to generate learning path:", error)
@@ -115,7 +132,10 @@ export default function LearningPage() {
     try {
       await fetch("/api/learning/progress", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": session.userId,
+        },
         body: JSON.stringify({
           userId: session.userId,
           pathId: selectedPath.id,
@@ -182,20 +202,20 @@ export default function LearningPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-bold text-text-primary">Learning Paths</h1>
-          <p className="text-text-secondary mt-2">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-4 sm:px-0">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-text-primary">Learning Paths</h1>
+          <p className="text-sm sm:text-base text-text-secondary mt-2">
             Your personalized roadmap to career success
           </p>
         </div>
-        <Button onClick={handleGeneratePath}>
+        <Button onClick={handleGeneratePath} className="w-full sm:w-auto flex-shrink-0">
           <Sparkles className="mr-2 h-4 w-4" />
           New Path
         </Button>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 px-4 sm:px-0">
         {/* Paths List */}
         <div className="lg:col-span-1 space-y-4">
           {paths.map((path) => (
@@ -374,6 +394,8 @@ export default function LearningPage() {
     </div>
   )
 }
+
+
 
 
 

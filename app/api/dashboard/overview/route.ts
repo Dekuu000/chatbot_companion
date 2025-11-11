@@ -13,7 +13,6 @@ import { prisma } from '@/lib/prisma'
 import { careerService } from '@/lib/services/career.service'
 import { parseConversationTags } from '@/lib/ai/conversation-state'
 import { getLocalizedResources, describeMarketSnapshot } from '@/lib/content/ph-knowledge'
-import { parseConversationTags } from '@/lib/ai/conversation-state'
 import { secureRoute } from '@/lib/middleware/route-guards'
 
 const MAX_ACTIVITY_ITEMS = 12
@@ -197,7 +196,10 @@ async function handleOverview(request: NextRequest) {
       (typeof profile.email === 'string' ? profile.email.split('@')[0] : null) ||
       'there'
 
-    const formattedSuggestions = suggestions.map((suggestion) => ({
+    const formattedSuggestions = suggestions
+      .slice()
+      .sort((a, b) => (b.confidenceScore ?? 0) - (a.confidenceScore ?? 0))
+      .map((suggestion) => ({
       id: suggestion.id,
       title: suggestion.title,
       summary: suggestion.summary,
@@ -207,7 +209,7 @@ async function handleOverview(request: NextRequest) {
       confidenceScore: suggestion.confidenceScore,
       skills: parseCareerSkills(suggestion.skillsRequired),
       createdAt: suggestion.createdAt?.toISOString?.() ?? new Date().toISOString(),
-    }))
+      }))
 
     const activityItems = [
       ...resumeRecords.map((resume) =>
@@ -336,15 +338,22 @@ async function handleOverview(request: NextRequest) {
     const focusContext = (() => {
       const targetRole = parsedConversationTags?.targetRole ?? profile.goals?.trim() ?? null
       if (!targetRole && !parsedConversationTags) return null
+      
+      // Determine the source of targetRole to set accurate timestamp
+      const isFromProfile = !parsedConversationTags?.targetRole && profile.goals?.trim()
+      
       return {
         targetRole,
         intent: parsedConversationTags?.intent ?? null,
         stage: parsedConversationTags?.stage ?? null,
         goalSummary: parsedConversationTags?.goalSummary ?? profile.goals ?? null,
-        updatedAt:
-            parsedConversationTags?.updatedAt ??
+        updatedAt: isFromProfile
+          ? (profile.updatedAt instanceof Date
+              ? profile.updatedAt.toISOString()
+              : new Date(profile.updatedAt || Date.now()).toISOString())
+          : (parsedConversationTags?.updatedAt ??
               latestConversation?.lastMessageAt?.toISOString?.() ??
-              new Date().toISOString(),
+              new Date().toISOString()),
         marketSnapshot: describeMarketSnapshot(targetRole),
       }
     })()

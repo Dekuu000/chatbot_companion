@@ -27,4 +27,3 @@ export function secureRoute(handler: RouteHandler, options: GuardOptions = {}) {
   return withErrorHandling(wrappedHandler)
 }
 
-

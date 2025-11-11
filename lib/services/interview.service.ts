@@ -470,10 +470,3 @@ function summarizeText(text: string): string {
   return sentences.slice(0, 4).join(' ')
 }
 
-
-
-
-
-
-
-

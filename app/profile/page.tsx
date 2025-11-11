@@ -77,7 +77,9 @@ export default function ProfilePage() {
     const loadProfile = async () => {
       setIsLoading(true)
       try {
-        const response = await fetch(`/api/profile?userId=${session.userId}`)
+        const response = await fetch(`/api/profile?userId=${session.userId}`, {
+          headers: { 'x-user-id': session.userId },
+        })
         if (!response.ok) {
           throw new Error('Failed to load profile')
         }
@@ -120,7 +122,10 @@ export default function ProfilePage() {
     try {
       const response = await fetch('/api/profile', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': session.userId,
+        },
         body: JSON.stringify({
           userId: session.userId,
           ...profile,
@@ -234,14 +239,14 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8 px-4 sm:px-6">
         {/* Header */}
         <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold text-text-primary flex items-center justify-center">
-            <UserCircle className="h-10 w-10 text-primary mr-3" />
-            My Profile
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-text-primary flex items-center justify-center flex-wrap gap-2">
+            <UserCircle className="h-8 w-8 sm:h-10 sm:w-10 text-primary" />
+            <span>My Profile</span>
           </h1>
-          <p className="text-text-secondary">
+          <p className="text-sm sm:text-base text-text-secondary">
             Complete your profile to get personalized career recommendations
           </p>
         </div>

@@ -152,10 +152,3 @@ export const RATE_LIMITS = {
   CAREER_SUGGESTIONS: { requests: 20, window: 3600 },
 } as const
 
-
-
-
-
-
-
-

@@ -65,7 +65,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const handleLogout = () => {
     signOut()
-    router.push("/login")
+    router.replace("/")
+    router.refresh()
   }
 
   if (!isReady) {
@@ -119,8 +120,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen bg-bg">
         <header className="sticky top-0 z-40 w-full border-b border-border bg-bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-bg-surface/60">
-          <div className="container grid h-16 gap-2 px-4 py-3 sm:h-auto sm:grid-cols-[1fr_auto] sm:items-center sm:gap-4 sm:px-6 lg:px-8">
-            <div className="flex items-start gap-10 sm:items-center">
+        <div className="container grid h-auto gap-3 px-4 py-3 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-4 sm:px-6 lg:px-8">
+          <div className="flex items-start gap-4 sm:gap-10 sm:items-center flex-wrap">
               <Link
                 href="/"
                 className="flex items-center gap-2 rounded-lg px-2 py-1 transition-colors hover:bg-muted sm:-ml-2"
@@ -135,20 +136,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   Guest mode
                 </span>
                 <span className="text-text-secondary">
-                  History won’t be saved in guest mode. Sign in to sync progress, unlock resume feedback, and track your streak.
+                  History won't be saved in guest mode. Sign in to sync progress, unlock resume feedback, and track your streak.
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-2 sm:justify-end">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:justify-end w-full sm:w-auto">
               <Link
                 href="/login"
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-2xl border border-primary text-sm font-semibold text-primary transition-colors hover:bg-primary/10 h-10 px-4"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-2xl border border-primary text-xs sm:text-sm font-semibold text-primary transition-colors hover:bg-primary/10 h-10 px-4"
               >
                 Sign in
               </Link>
               <Link
                 href="/signup"
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-2xl bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 h-10 px-4"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-2xl bg-primary text-xs sm:text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 h-10 px-4"
               >
                 Create account
               </Link>
@@ -171,13 +172,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <span className="hidden text-lg font-semibold text-text-primary sm:inline">Career Explorer</span>
           </Link>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {isAuthenticated ? (
               <>
-                <span className="hidden sm:inline text-sm text-text-secondary">Signed in as {displayName}</span>
+                <span className="hidden sm:inline text-xs sm:text-sm text-text-secondary truncate max-w-[150px] sm:max-w-none">Signed in as {displayName}</span>
                 <button
                   onClick={handleLogout}
-                  className="inline-flex items-center justify-center whitespace-nowrap rounded-2xl text-sm font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted hover:text-text-primary h-11 px-6"
+                  className="inline-flex items-center justify-center whitespace-nowrap rounded-2xl text-xs sm:text-sm font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted hover:text-text-primary h-10 sm:h-11 px-4 sm:px-6"
                 >
                   Log Out
                 </button>
@@ -186,13 +187,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <>
                 <Link
                   href="/login"
-                  className="inline-flex items-center justify-center whitespace-nowrap rounded-2xl text-sm font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted hover:text-text-primary h-11 px-6"
+                  className="inline-flex items-center justify-center whitespace-nowrap rounded-2xl text-xs sm:text-sm font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted hover:text-text-primary h-10 sm:h-11 px-4 sm:px-6"
                 >
                   Log In
                 </Link>
                 <Link
                   href="/signup"
-                  className="inline-flex items-center justify-center whitespace-nowrap rounded-2xl text-sm font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-11 px-6"
+                  className="inline-flex items-center justify-center whitespace-nowrap rounded-2xl text-xs sm:text-sm font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 sm:h-11 px-4 sm:px-6"
                 >
                   Sign Up
                 </Link>
@@ -206,11 +207,3 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     </div>
   )
 }
-
-
-
-
-
-
-
-

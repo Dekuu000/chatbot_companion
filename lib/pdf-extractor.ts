@@ -39,6 +39,3 @@ export async function extractTextFromResumeFile(buffer: Buffer, mimeType: string
   throw new Error('Unsupported resume file type')
 }
 
-
-
-

@@ -178,10 +178,3 @@ Respond with JSON:
 
 export const learningPathService = new LearningPathService()
 
-
-
-
-
-
-
-

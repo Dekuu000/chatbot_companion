@@ -38,12 +38,17 @@ export async function analyzeResumeWithAI(
   { profileContext, targetRole, userStage, intent, timeoutMs = DEFAULT_TIMEOUT, enableFallback = true }: AnalyseOptions
 ): Promise<ResumeAnalysisResult> {
   const resumeText = resume.extractedText || ''
+  const effectiveTimeout =
+    typeof timeoutMs === 'number' && Number.isFinite(timeoutMs) && timeoutMs > 0 ? Math.round(timeoutMs) : DEFAULT_TIMEOUT
 
-  const headers = getPerplexityHeaders()
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), timeoutMs)
+  let controller: AbortController | null = null
+  let timeout: ReturnType<typeof setTimeout> | null = null
 
   try {
+    const headers = getPerplexityHeaders()
+    controller = new AbortController()
+    timeout = setTimeout(() => controller?.abort(), effectiveTimeout)
+
     const response = await fetch(PERPLEXITY_API_URL, {
       method: 'POST',
       headers,
@@ -82,7 +87,10 @@ Return a JSON object with:
       signal: controller.signal,
     })
 
-    clearTimeout(timeout)
+    if (timeout) {
+      clearTimeout(timeout)
+      timeout = null
+    }
 
     if (!response.ok) {
       throw new Error(await response.text())
@@ -92,7 +100,12 @@ Return a JSON object with:
     const content = json.choices?.[0]?.message?.content || '{}'
     return JSON.parse(content)
   } catch (error) {
-    clearTimeout(timeout)
+    if (timeout) {
+      clearTimeout(timeout)
+    }
+    if (controller && controller.signal.aborted === false) {
+      controller.abort()
+    }
     if (enableFallback) {
       console.warn('resume_analysis_fallback', error)
       return buildFallbackResumeAnalysis(resumeText)
