@@ -4,12 +4,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { learningPathService } from '@/lib/services/learning-path.service'
-import { analyticsService } from '@/lib/services/analytics.service'
-import { rateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
-import { secureRoute } from '@/lib/middleware/route-guards'
 import { z } from 'zod'
 import { sanitizeInput } from '@/lib/utils/sanitization'
+
+// Force dynamic rendering - this route should not be statically analyzed during build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 const generateSchema = z.object({
   userId: z.string(),
@@ -17,6 +17,10 @@ const generateSchema = z.object({
 })
 
 async function handleGenerate(request: NextRequest) {
+  // Lazy import to prevent Prisma initialization during build
+  const { learningPathService } = await import('@/lib/services/learning-path.service')
+  const { analyticsService } = await import('@/lib/services/analytics.service')
+  
   const body = await request.json()
   const { userId, careerGoal } = generateSchema.parse(body)
 
@@ -44,9 +48,16 @@ async function handleGenerate(request: NextRequest) {
   return NextResponse.json({ learningPath }, { status: 200 })
 }
 
-export const POST = secureRoute(handleGenerate, {
-  middlewares: [rateLimit(RATE_LIMITS.AI)],
-})
+// Export handler directly to avoid build-time analysis of secureRoute wrapper
+export async function POST(request: NextRequest) {
+  // Lazy import secureRoute and rateLimit to prevent any build-time analysis
+  const { secureRoute } = await import('@/lib/middleware/route-guards')
+  const { rateLimit, RATE_LIMITS } = await import('@/lib/middleware/rate-limit')
+  const handler = secureRoute(handleGenerate, {
+    middlewares: [rateLimit(RATE_LIMITS.AI)],
+  })
+  return handler(request)
+}
 
 
 
