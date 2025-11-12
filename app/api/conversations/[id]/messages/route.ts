@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { secureRoute } from '@/lib/middleware/route-guards'
-import { parseConversationTags } from '@/lib/ai/conversation-state'
-import { memoryGetConversation, memoryListMessages, memoryAddMessage } from '@/lib/cache/conversation-store'
 
 // Force dynamic rendering - this route should not be statically analyzed during build
 export const dynamic = 'force-dynamic'
@@ -26,6 +23,8 @@ async function ensureConversationOwnership(conversationId: string, userId: strin
     return conversation
   } catch (error) {
     console.warn('conversation_lookup_fallback', error instanceof Error ? error.message : error)
+    // Lazy import memory functions to prevent any build-time analysis
+    const { memoryGetConversation } = await import('@/lib/cache/conversation-store')
     const conversation = memoryGetConversation(conversationId)
     if (conversation && conversation.userId === userId && !conversation.archived) {
       return conversation
@@ -54,6 +53,8 @@ async function listMessages(request: NextRequest, params: { id: string }) {
       select: { id: true, role: true, content: true, createdAt: true },
     })
 
+    // Lazy import parseConversationTags to prevent Prisma type analysis during build
+    const { parseConversationTags } = await import('@/lib/ai/conversation-state')
     return NextResponse.json(
       {
         messages,
@@ -63,6 +64,9 @@ async function listMessages(request: NextRequest, params: { id: string }) {
     )
   } catch (error) {
     console.warn('conversation_messages_fallback', error instanceof Error ? error.message : error)
+    // Lazy import memory functions to prevent any build-time analysis
+    const { memoryListMessages } = await import('@/lib/cache/conversation-store')
+    const { parseConversationTags } = await import('@/lib/ai/conversation-state')
     const fallback = memoryListMessages(conversation.id)
     if (!fallback) {
       return NextResponse.json({ messages: [], contextTags: null }, { status: 200 })
@@ -112,6 +116,8 @@ async function createMessage(request: NextRequest, params: { id: string }) {
     return NextResponse.json({ message }, { status: 201 })
   } catch (error) {
     console.warn('conversation_message_create_fallback', error instanceof Error ? error.message : error)
+    // Lazy import memory functions to prevent any build-time analysis
+    const { memoryAddMessage } = await import('@/lib/cache/conversation-store')
     const message = memoryAddMessage(conversation.id, role as 'user' | 'assistant', content)
     if (!message) {
       return NextResponse.json({ error: 'Failed to store message' }, { status: 500 })
@@ -121,12 +127,16 @@ async function createMessage(request: NextRequest, params: { id: string }) {
 }
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  // Lazy import secureRoute to prevent any build-time analysis
+  const { secureRoute } = await import('@/lib/middleware/route-guards')
   const { id } = await params
   const handler = secureRoute((req) => listMessages(req, { id }))
   return handler(request)
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  // Lazy import secureRoute to prevent any build-time analysis
+  const { secureRoute } = await import('@/lib/middleware/route-guards')
   const { id } = await params
   const handler = secureRoute((req) => createMessage(req, { id }))
   return handler(request)
