@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { secureRoute } from '@/lib/middleware/route-guards'
-import { parseConversationTags } from '@/lib/ai/conversation-state'
+
+// Force dynamic rendering - this route should not be statically analyzed during build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 async function listConversations(request: NextRequest) {
+  // Lazy import to prevent Prisma initialization during build
+  const { prisma } = await import('@/lib/prisma')
+  
   const userId = request.headers.get('x-user-id')
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -27,6 +31,9 @@ async function listConversations(request: NextRequest) {
     },
   })
 
+  // Lazy import parseConversationTags to prevent Prisma type analysis during build
+  const { parseConversationTags } = await import('@/lib/ai/conversation-state')
+  
   const formatted = conversations.map((conversation) => {
     const firstMessage = conversation.messages?.[0]?.content?.trim() ?? ''
     const trimmedTitle = conversation.title?.trim() ?? ''
@@ -46,6 +53,9 @@ async function listConversations(request: NextRequest) {
 }
 
 async function createConversation(request: NextRequest) {
+  // Lazy import to prevent Prisma initialization during build
+  const { prisma } = await import('@/lib/prisma')
+  
   const userId = request.headers.get('x-user-id')
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -66,8 +76,20 @@ async function createConversation(request: NextRequest) {
   return NextResponse.json({ conversation }, { status: 201 })
 }
 
-export const GET = secureRoute(listConversations)
-export const POST = secureRoute(createConversation)
+// Export handlers directly to avoid build-time analysis of secureRoute wrapper
+export async function GET(request: NextRequest) {
+  // Lazy import secureRoute to prevent any build-time analysis
+  const { secureRoute } = await import('@/lib/middleware/route-guards')
+  const handler = secureRoute(listConversations)
+  return handler(request)
+}
+
+export async function POST(request: NextRequest) {
+  // Lazy import secureRoute to prevent any build-time analysis
+  const { secureRoute } = await import('@/lib/middleware/route-guards')
+  const handler = secureRoute(createConversation)
+  return handler(request)
+}
 
 
 
