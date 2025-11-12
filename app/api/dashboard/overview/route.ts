@@ -132,6 +132,12 @@ function buildFallbackRoadmap() {
 }
 
 async function handleOverview(request: NextRequest) {
+  // Lazy import to prevent Prisma initialization during build
+  const { ensureProfile } = await import('@/lib/profile')
+  const { prisma } = await import('@/lib/prisma')
+  const { careerService } = await import('@/lib/services/career.service')
+  const { parseConversationTags } = await import('@/lib/ai/conversation-state')
+  
   try {
     const userId = request.headers.get('x-user-id')
     if (!userId) {
