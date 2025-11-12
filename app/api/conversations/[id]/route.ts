@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { secureRoute } from '@/lib/middleware/route-guards'
-import { parseConversationTags } from '@/lib/ai/conversation-state'
 
 // Force dynamic rendering - this route should not be statically analyzed during build
 export const dynamic = 'force-dynamic'
@@ -26,6 +24,8 @@ async function getConversation(request: NextRequest, params: { id: string }) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
+  // Lazy import parseConversationTags to prevent Prisma type analysis during build
+  const { parseConversationTags } = await import('@/lib/ai/conversation-state')
   const { contextTags, ...rest } = conversation as any
   return NextResponse.json(
     {
@@ -99,18 +99,24 @@ async function deleteConversation(request: NextRequest, params: { id: string }) 
 }
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  // Lazy import secureRoute to prevent any build-time analysis
+  const { secureRoute } = await import('@/lib/middleware/route-guards')
   const { id } = await params
   const handler = secureRoute((req) => getConversation(req, { id }))
   return handler(request)
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  // Lazy import secureRoute to prevent any build-time analysis
+  const { secureRoute } = await import('@/lib/middleware/route-guards')
   const { id } = await params
   const handler = secureRoute((req) => updateConversation(req, { id }))
   return handler(request)
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  // Lazy import secureRoute to prevent any build-time analysis
+  const { secureRoute } = await import('@/lib/middleware/route-guards')
   const { id } = await params
   const handler = secureRoute((req) => deleteConversation(req, { id }))
   return handler(request)
