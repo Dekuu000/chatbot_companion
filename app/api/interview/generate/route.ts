@@ -61,9 +61,16 @@ async function handleGenerate(request: NextRequest) {
   }
 }
 
-export const POST = secureRoute(handleGenerate, {
-  middlewares: [rateLimit(RATE_LIMITS.AI)],
-})
+// Export handler directly to avoid build-time analysis of secureRoute wrapper
+export async function POST(request: NextRequest) {
+  // Lazy import secureRoute and rateLimit to prevent any build-time analysis
+  const { secureRoute } = await import('@/lib/middleware/route-guards')
+  const { rateLimit, RATE_LIMITS } = await import('@/lib/middleware/rate-limit')
+  const handler = secureRoute(handleGenerate, {
+    middlewares: [rateLimit(RATE_LIMITS.AI)],
+  })
+  return handler(request)
+}
 
 
 
