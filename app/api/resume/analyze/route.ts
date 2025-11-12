@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ensureProfile } from '@/lib/profile'
-import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
-import { buildBriefProfileContext } from '@/lib/utils/profile-context'
-import { rateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
-import { secureRoute } from '@/lib/middleware/route-guards'
-import { analyzeResumeWithAI, buildFallbackResumeAnalysis } from '@/lib/services/resume.service'
-import { parseConversationTags } from '@/lib/ai/conversation-state'
+
+// Force dynamic rendering - this route should not be statically analyzed during build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 const analyzeSchema = z.object({
   resumeId: z.string(),
@@ -15,6 +12,13 @@ const analyzeSchema = z.object({
 })
 
 async function handleAnalyze(request: NextRequest) {
+  // Lazy import to prevent Prisma initialization during build
+  const { prisma } = await import('@/lib/prisma')
+  const { ensureProfile } = await import('@/lib/profile')
+  const { buildBriefProfileContext } = await import('@/lib/utils/profile-context')
+  const { analyzeResumeWithAI, buildFallbackResumeAnalysis } = await import('@/lib/services/resume.service')
+  const { parseConversationTags } = await import('@/lib/ai/conversation-state')
+  
   const body = await request.json()
   const { resumeId, userId, force } = analyzeSchema.parse(body)
 
@@ -174,7 +178,14 @@ function parseStoredAnalysis(resume: {
   return result
 }
 
-export const POST = secureRoute(handleAnalyze, {
-  middlewares: [rateLimit(RATE_LIMITS.RESUME_ANALYSIS)],
-})
+// Export handler directly to avoid build-time analysis of secureRoute wrapper
+export async function POST(request: NextRequest) {
+  // Lazy import secureRoute and rateLimit to prevent any build-time analysis
+  const { secureRoute } = await import('@/lib/middleware/route-guards')
+  const { rateLimit, RATE_LIMITS } = await import('@/lib/middleware/rate-limit')
+  const handler = secureRoute(handleAnalyze, {
+    middlewares: [rateLimit(RATE_LIMITS.RESUME_ANALYSIS)],
+  })
+  return handler(request)
+}
 

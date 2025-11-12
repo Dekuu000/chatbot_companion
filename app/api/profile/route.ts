@@ -5,10 +5,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { ensureProfile } from '@/lib/profile'
-import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
-import { secureRoute } from '@/lib/middleware/route-guards'
+
+// Force dynamic rendering - this route should not be statically analyzed during build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 const updateProfileSchema = z.object({
   userId: z.string(),
@@ -22,6 +23,9 @@ const updateProfileSchema = z.object({
 
 async function handleGetProfile(request: NextRequest) {
   try {
+    // Lazy import to prevent Prisma initialization during build
+    const { ensureProfile } = await import('@/lib/profile')
+    
     const userId = request.headers.get('x-user-id')
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -47,6 +51,10 @@ async function handleGetProfile(request: NextRequest) {
 
 async function handleUpdateProfile(request: NextRequest) {
   try {
+    // Lazy import to prevent Prisma initialization during build
+    const { prisma } = await import('@/lib/prisma')
+    const { ensureProfile } = await import('@/lib/profile')
+    
     const body = await request.json()
     const data = updateProfileSchema.parse(body)
 
@@ -101,8 +109,20 @@ async function handleUpdateProfile(request: NextRequest) {
   }
 }
 
-export const GET = secureRoute(handleGetProfile, { skipErrorWrapper: true })
-export const PUT = secureRoute(handleUpdateProfile, { skipErrorWrapper: true })
+// Export handlers directly to avoid build-time analysis of secureRoute wrapper
+export async function GET(request: NextRequest) {
+  // Lazy import secureRoute to prevent any build-time analysis
+  const { secureRoute } = await import('@/lib/middleware/route-guards')
+  const handler = secureRoute(handleGetProfile, { skipErrorWrapper: true })
+  return handler(request)
+}
+
+export async function PUT(request: NextRequest) {
+  // Lazy import secureRoute to prevent any build-time analysis
+  const { secureRoute } = await import('@/lib/middleware/route-guards')
+  const handler = secureRoute(handleUpdateProfile, { skipErrorWrapper: true })
+  return handler(request)
+}
 
 
 

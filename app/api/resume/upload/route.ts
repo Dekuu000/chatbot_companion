@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { extractTextFromResumeFile } from '@/lib/pdf-extractor'
-import { prisma } from '@/lib/prisma'
-import { secureRoute } from '@/lib/middleware/route-guards'
+
+// Force dynamic rendering - this route should not be statically analyzed during build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 async function handleUpload(request: NextRequest) {
+  // Lazy import to prevent Prisma initialization during build
+  const { prisma } = await import('@/lib/prisma')
+  
   const userId = request.headers.get('x-user-id')
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -64,7 +69,13 @@ async function handleUpload(request: NextRequest) {
   )
 }
 
-export const POST = secureRoute(handleUpload)
+// Export handler directly to avoid build-time analysis of secureRoute wrapper
+export async function POST(request: NextRequest) {
+  // Lazy import secureRoute to prevent any build-time analysis
+  const { secureRoute } = await import('@/lib/middleware/route-guards')
+  const handler = secureRoute(handleUpload)
+  return handler(request)
+}
 
 
 

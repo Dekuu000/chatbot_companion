@@ -4,16 +4,20 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { quizService } from '@/lib/services/quiz.service'
-import { rateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
-import { secureRoute } from '@/lib/middleware/route-guards'
 import { z } from 'zod'
+
+// Force dynamic rendering - this route should not be statically analyzed during build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 const querySchema = z.object({
   type: z.enum(['skills', 'interests', 'personality']),
 })
 
 async function handleGetQuestions(request: NextRequest) {
+  // Lazy import to prevent Prisma initialization during build
+  const { quizService } = await import('@/lib/services/quiz.service')
+  
   const { searchParams } = request.nextUrl
   const type = searchParams.get('type') || 'skills'
 
@@ -24,9 +28,16 @@ async function handleGetQuestions(request: NextRequest) {
   return NextResponse.json({ questions }, { status: 200 })
 }
 
-export const GET = secureRoute(handleGetQuestions, {
-  middlewares: [rateLimit(RATE_LIMITS.DEFAULT)],
-})
+// Export handler directly to avoid build-time analysis of secureRoute wrapper
+export async function GET(request: NextRequest) {
+  // Lazy import secureRoute and rateLimit to prevent any build-time analysis
+  const { secureRoute } = await import('@/lib/middleware/route-guards')
+  const { rateLimit, RATE_LIMITS } = await import('@/lib/middleware/rate-limit')
+  const handler = secureRoute(handleGetQuestions, {
+    middlewares: [rateLimit(RATE_LIMITS.DEFAULT)],
+  })
+  return handler(request)
+}
 
 
 
