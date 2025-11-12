@@ -4,11 +4,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { interviewService } from '@/lib/services/interview.service'
-import { analyticsService } from '@/lib/services/analytics.service'
-import { rateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
-import { secureRoute } from '@/lib/middleware/route-guards'
 import { z } from 'zod'
+
+// Force dynamic rendering - this route should not be statically analyzed during build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 const scoreSchema = z.object({
   sessionId: z.string(),
@@ -22,6 +22,10 @@ const scoreSchema = z.object({
 })
 
 async function handleScore(request: NextRequest) {
+  // Lazy import to prevent Prisma initialization during build
+  const { interviewService } = await import('@/lib/services/interview.service')
+  const { analyticsService } = await import('@/lib/services/analytics.service')
+  
   const body = await request.json()
   const { sessionId, responses } = scoreSchema.parse(body)
 
@@ -44,9 +48,16 @@ async function handleScore(request: NextRequest) {
   return NextResponse.json({ result }, { status: 200 })
 }
 
-export const POST = secureRoute(handleScore, {
-  middlewares: [rateLimit(RATE_LIMITS.AI)],
-})
+// Export handler directly to avoid build-time analysis of secureRoute wrapper
+export async function POST(request: NextRequest) {
+  // Lazy import secureRoute and rateLimit to prevent any build-time analysis
+  const { secureRoute } = await import('@/lib/middleware/route-guards')
+  const { rateLimit, RATE_LIMITS } = await import('@/lib/middleware/rate-limit')
+  const handler = secureRoute(handleScore, {
+    middlewares: [rateLimit(RATE_LIMITS.AI)],
+  })
+  return handler(request)
+}
 
 
 
