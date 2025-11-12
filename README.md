@@ -28,8 +28,8 @@ A Next.js application that guides students exploring career paths matched to the
 ### Step 1: Clone the Project
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/chatbot-companion.git
-cd chatbot-companion
+git clone https://github.com/Dekuu000/chatbot_companion.git
+cd chatbot_companion
 ```
 
 ### Step 2: Install Dependencies
@@ -61,17 +61,25 @@ npm install
 2. Go to the **"Overview"** tab
 3. Find the **"Connection information"** section
 4. Note down:
-   - **Host** (e.g., `chatbot-ai-mysql-xxxxx.a.aivencloud.com`)
-   - **Port** (usually `3306`)
+   - **Host** (e.g., `mysql-3baa6ed7-xxxxx.l.aivencloud.com`)
+   - **Port** (e.g., `20193` or `3306`)
    - **Database name** (default: `defaultdb`)
    - **Username** (default: `avnadmin`)
    - **Password** (click "Show" to reveal)
+   - **Service URI** (complete connection string - copy this!)
 
-#### 3.4 Create Your Database
+#### 3.4 Database Setup
 
+You can use the default `defaultdb` database that comes with your Aiven MySQL service, or create a custom database:
+
+**Option 1: Use Default Database (Recommended)**
+- Use `defaultdb` - no additional setup needed
+- This is the simplest option and works out of the box
+
+**Option 2: Create Custom Database (Optional)**
 1. In the Aiven Console → Your MySQL service → **"Databases"** tab
 2. Click **"Create database"**
-3. Name it: `chatbot_ai`
+3. Name it: `chatbot_ai` (or your preferred name)
 4. Click **"Create"**
 
 Alternatively, you can create it via MySQL client:
@@ -94,7 +102,9 @@ CREATE DATABASE chatbot_ai CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
    ```env
    # Database - Aiven MySQL
-   DATABASE_URL="mysql://avnadmin:YOUR_PASSWORD@YOUR_HOST:3306/chatbot_ai?sslaccept=strict"
+   # Use the Service URI from Aiven Console (Overview → Connection information)
+   # Format: mysql://username:password@host:port/database?ssl-mode=REQUIRED
+   DATABASE_URL="mysql://avnadmin:YOUR_PASSWORD@YOUR_HOST:PORT/defaultdb?ssl-mode=REQUIRED"
    
    # Perplexity API Key (required)
    PERPLEXITY_API_KEY="your-perplexity-api-key-here"
@@ -103,14 +113,18 @@ CREATE DATABASE chatbot_ai CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
    NEXT_PUBLIC_APP_URL="http://localhost:3000"
    
    # Auth
+   # Generate NEXTAUTH_SECRET: openssl rand -base64 32 (or use online generator)
    NEXTAUTH_SECRET="replace-with-strong-random-secret"
    ```
 
    **Important Notes:**
+   - **Easiest**: Copy the **Service URI** directly from Aiven Console (Overview → Connection information)
    - Replace `YOUR_PASSWORD` with your Aiven password
    - Replace `YOUR_HOST` with your Aiven host
-   - **Always include** `?sslaccept=strict` for SSL connection
-   - Generate `NEXTAUTH_SECRET` using: `openssl rand -base64 32` (or use an online generator)
+   - Replace `PORT` with your Aiven port (usually `20193` or `3306`)
+   - Use `defaultdb` as the database name (or `chatbot_ai` if you created a custom database)
+   - **Always include** `?ssl-mode=REQUIRED` for SSL connection (this is the format that works with Aiven)
+   - Generate `NEXTAUTH_SECRET` using: `openssl rand -base64 32` (or use an online generator like https://generate-secret.vercel.app/32)
 
 ### Step 5: Set Up Database Schema with Prisma
 
@@ -171,21 +185,167 @@ Open [http://localhost:3000](http://localhost:3000) in your browser. The app hot
 ### Step 7: Create Your First User
 
 1. Navigate to the signup page: `http://localhost:3000/signup`
-2. Create an account with username and email
+2. Create an account with email and password
 3. Complete your profile with skills, interests, and education level
 
-## Useful Scripts
+---
+
+## Vercel Deployment Guide
+
+### Prerequisites for Vercel Deployment
+
+Before deploying to Vercel, ensure you have:
+
+- ✅ **Vercel account** ([Sign up here](https://vercel.com/signup) - free tier available)
+- ✅ **GitHub repository** with your code pushed
+- ✅ **Aiven MySQL database** already set up and running
+- ✅ **All environment variables** ready (DATABASE_URL, PERPLEXITY_API_KEY, etc.)
+
+### Step 1: Connect Repository to Vercel
+
+1. Go to [Vercel Dashboard](https://vercel.com/dashboard)
+2. Click **"Add New..."** → **"Project"**
+3. Click **"Import Git Repository"**
+4. Select your GitHub repository: `Dekuu000/chatbot_companion`
+5. Configure project settings:
+   - **Framework Preset**: Next.js (auto-detected)
+   - **Root Directory**: `./` (default)
+   - **Build Command**: `npm run build` (auto-detected)
+   - **Output Directory**: `.next` (auto-detected)
+   - **Install Command**: `npm install` (auto-detected)
+6. Click **"Deploy"** (you'll configure environment variables next)
+
+### Step 2: Configure Environment Variables in Vercel
+
+After the initial deployment, configure your environment variables:
+
+1. Go to your project in Vercel Dashboard
+2. Navigate to **Settings** → **Environment Variables**
+3. Add each variable below:
+
+#### Required Environment Variables
+
+**DATABASE_URL**
+- **Variable Name**: `DATABASE_URL`
+- **Value**: Copy the **Service URI** from Aiven Console (Overview → Connection information)
+- **Format**: `mysql://avnadmin:YOUR_PASSWORD@YOUR_HOST:PORT/defaultdb?ssl-mode=REQUIRED`
+- **Example**: `mysql://avnadmin:AVNS_xxxxx@mysql-xxxxx.l.aivencloud.com:20193/defaultdb?ssl-mode=REQUIRED`
+- **Environments**: ✅ Production, ✅ Preview, ✅ Development
+
+**PERPLEXITY_API_KEY**
+- **Variable Name**: `PERPLEXITY_API_KEY`
+- **Value**: Your Perplexity API key
+- **Environments**: ✅ Production, ✅ Preview, ✅ Development
+
+**NEXTAUTH_SECRET**
+- **Variable Name**: `NEXTAUTH_SECRET`
+- **Value**: Generate a secure random secret:
+  - **Online**: https://generate-secret.vercel.app/32
+  - **PowerShell**: `[Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32))`
+  - **Node.js**: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`
+- **Environments**: ✅ Production, ✅ Preview, ✅ Development
+
+**NEXT_PUBLIC_APP_URL**
+- **Variable Name**: `NEXT_PUBLIC_APP_URL`
+- **Value**: Your Vercel deployment URL (e.g., `https://your-project-name.vercel.app`)
+- **Note**: Update this after your first deployment with the actual Vercel URL
+- **Environments**: ✅ Production, ✅ Preview, ✅ Development
+
+#### Optional Environment Variables
+
+**PERPLEXITY_MODEL** (Optional)
+- **Variable Name**: `PERPLEXITY_MODEL`
+- **Value**: `sonar` (default), `sonar-pro`, `sonar-reasoning`, `sonar-reasoning-pro`, or `sonar-deep-research`
+- **Environments**: ✅ Production, ✅ Preview, ✅ Development
+
+**OPENAI_API_KEY** (Optional - fallback)
+- **Variable Name**: `OPENAI_API_KEY`
+- **Value**: Your OpenAI API key (if using as fallback)
+- **Environments**: ✅ Production, ✅ Preview, ✅ Development
+
+### Step 3: Build Configuration
+
+The project is already configured to run database migrations during build:
+
+- **Build Command**: `prisma generate && prisma migrate deploy && next build`
+- Migrations run automatically on each deployment
+- Database tables are created/updated automatically
+- No manual migration steps needed
+
+### Step 4: Deploy and Verify
+
+1. **Redeploy** your project:
+   - Go to **Deployments** tab
+   - Click **"Redeploy"** on the latest deployment
+   - Or push a new commit to trigger automatic deployment
+
+2. **Check Build Logs**:
+   - Watch the build process in the Vercel dashboard
+   - Look for: `Running migrations...` and `No pending migrations to apply`
+   - Build should complete successfully
+
+3. **Verify Database Connection**:
+   - Check function logs: **Functions** → `/api/auth/session`
+   - Should not show database connection errors
+
+4. **Test Signup Functionality**:
+   - Visit your deployed app: `https://your-project-name.vercel.app`
+   - Navigate to `/signup`
+   - Create a test account
+   - Verify you can log in successfully
+
+### Step 5: Post-Deployment Checklist
+
+- [ ] Environment variables are set correctly
+- [ ] Build completed without errors
+- [ ] Database migrations ran successfully
+- [ ] Can access the deployed app
+- [ ] Signup functionality works
+- [ ] Login functionality works
+- [ ] Database connection is stable
+
+## Quick Reference
+
+### Local Development Quick Start
+
+```bash
+# 1. Clone and install
+git clone https://github.com/Dekuu000/chatbot_companion.git
+cd chatbot_companion
+npm install
+
+# 2. Set up environment variables
+cp env.example .env
+# Edit .env with your Aiven DATABASE_URL and PERPLEXITY_API_KEY
+
+# 3. Set up database
+npm run db:generate
+npm run db:push
+
+# 4. Start development server
+npm run dev
+```
+
+### Vercel Deployment Quick Start
+
+1. **Connect Repository**: Vercel Dashboard → Import Git Repository → Select `Dekuu000/chatbot_companion`
+2. **Add Environment Variables**: Settings → Environment Variables → Add all required variables
+3. **Deploy**: Click "Deploy" (migrations run automatically during build)
+4. **Verify**: Test signup/login functionality on your deployed app
+
+### Useful Scripts
 
 ```bash
 # Development
 npm run dev              # Start development server
-npm run build            # Build for production
+npm run build            # Build for production (includes migrations)
 npm run start            # Start production server
 
 # Database
 npm run db:generate      # Generate Prisma Client
 npm run db:push          # Push schema changes to database
-npm run db:migrate       # Run database migrations
+npm run db:migrate       # Run database migrations (dev)
+npm run db:migrate:deploy # Run database migrations (production)
 npm run db:studio        # Open Prisma Studio GUI
 
 # Code Quality
@@ -206,17 +366,25 @@ npm run test:ui          # Run tests with UI
 **Error: "Can't reach database server"**
 - Verify your `DATABASE_URL` is correct
 - Check that your Aiven service is running
-- Ensure `?sslaccept=strict` is included in the connection string
+- Ensure `?ssl-mode=REQUIRED` is included in the connection string
 - Verify firewall settings in Aiven Console
+- Check that you're using the correct port (may be `20193` instead of `3306`)
 
 **Error: "Access denied for user"**
 - Double-check username and password
-- Ensure the database name exists (`chatbot_ai`)
+- Ensure the database name exists (`defaultdb` or `chatbot_ai`)
 - Verify user permissions in Aiven
+- Make sure password doesn't contain special characters that need URL encoding
 
-**Error: "SSL connection required"**
-- Make sure `?sslaccept=strict` is in your `DATABASE_URL`
-- Some clients may need `?sslmode=require` instead
+**Error: "SSL connection required" or "SSL certificate verify failed"**
+- Make sure `?ssl-mode=REQUIRED` is in your `DATABASE_URL` (this is the format that works with Aiven)
+- **For Vercel**: Use the Service URI from Aiven Console which includes `?ssl-mode=REQUIRED`
+- **Alternative**: If `ssl-mode=REQUIRED` doesn't work, try `?sslcert=` (empty) to skip certificate verification
+
+**Error: "Unknown database"**
+- Verify the database name in your `DATABASE_URL` matches an existing database
+- Check Aiven Console → Databases tab to see available databases
+- Use `defaultdb` if you haven't created a custom database
 
 ### Prisma Generation Errors (Windows)
 
@@ -229,9 +397,53 @@ npm run test:ui          # Run tests with UI
 
 ### Environment Variables Not Loading
 
+**Local Development:**
 - Ensure your `.env` file is in the project root
 - Restart your dev server after changing `.env`
 - Never commit `.env` to version control (it's in `.gitignore`)
+
+**Vercel Deployment:**
+- Environment variables must be set in Vercel Dashboard → Settings → Environment Variables
+- `.env` file is NOT used in Vercel (it's gitignored)
+- After adding/updating variables, redeploy your project
+- Check that variables are set for the correct environment (Production/Preview/Development)
+- Variable names are case-sensitive
+
+### Vercel Deployment Issues
+
+**Error: "P1011: SSL certificate verify failed"**
+- **Solution**: Use `?ssl-mode=REQUIRED` in your `DATABASE_URL` (copy Service URI from Aiven)
+- This is the correct SSL format for Aiven MySQL with Prisma
+- Alternative: Use `?sslcert=` (empty) if certificate verification still fails
+
+**Error: "Failed to collect page data for /api/..."**
+- This means Prisma is trying to initialize during build
+- **Solution**: Already fixed! The codebase uses lazy imports to prevent this
+- If you see this error, ensure you're using the latest code from the repository
+
+**Error: "Command 'npm run build' exited with 1"**
+- Check build logs in Vercel for specific error messages
+- Common causes:
+  - Missing environment variables (especially `DATABASE_URL`)
+  - Database connection issues
+  - TypeScript errors
+  - Missing dependencies
+
+**Migrations Not Running**
+- Migrations run automatically during build (configured in `package.json`)
+- Check build logs for: `Running migrations...`
+- If migrations fail, check:
+  - `DATABASE_URL` is correct
+  - Database exists in Aiven
+  - SSL connection is properly configured
+
+**Signup Returns 500 Error**
+- Check Vercel function logs: **Functions** → `/api/auth/signup`
+- Common causes:
+  - Database tables don't exist (migrations didn't run)
+  - Database connection failed
+  - Missing required environment variables
+- Solution: Verify migrations ran successfully and database connection works
 
 ## Security Best Practices
 
