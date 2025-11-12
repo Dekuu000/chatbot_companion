@@ -8,12 +8,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { ensureProfile } from '@/lib/profile'
-import { prisma } from '@/lib/prisma'
-import { careerService } from '@/lib/services/career.service'
-import { parseConversationTags } from '@/lib/ai/conversation-state'
 import { getLocalizedResources, describeMarketSnapshot } from '@/lib/content/ph-knowledge'
-import { secureRoute } from '@/lib/middleware/route-guards'
+
+// Force dynamic rendering - this route should not be statically analyzed during build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 const MAX_ACTIVITY_ITEMS = 12
 const MAX_COACH_TIPS = 5
@@ -418,7 +417,13 @@ async function handleOverview(request: NextRequest) {
   }
 }
 
-export const GET = secureRoute(handleOverview, { skipErrorWrapper: true })
+// Export handler directly to avoid build-time analysis of secureRoute wrapper
+export async function GET(request: NextRequest) {
+  // Lazy import secureRoute to prevent any build-time analysis
+  const { secureRoute } = await import('@/lib/middleware/route-guards')
+  const handler = secureRoute(handleOverview, { skipErrorWrapper: true })
+  return handler(request)
+}
 
 
 
