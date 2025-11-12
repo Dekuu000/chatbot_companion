@@ -6,9 +6,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { sanitizeInput } from '@/lib/utils/sanitization'
-import { rateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
-import { secureRoute } from '@/lib/middleware/route-guards'
-import { interviewService } from '@/lib/services/interview.service'
+
+// Force dynamic rendering - this route should not be statically analyzed during build
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 const interviewSchema = z.object({
   userId: z.string(),
@@ -17,6 +18,9 @@ const interviewSchema = z.object({
 })
 
 async function handleGenerate(request: NextRequest) {
+  // Lazy import to prevent Prisma initialization during build
+  const { interviewService } = await import('@/lib/services/interview.service')
+  
   const body = await request.json()
   const { userId, jobTitle, difficulty } = interviewSchema.parse(body)
 
@@ -60,6 +64,7 @@ async function handleGenerate(request: NextRequest) {
 export const POST = secureRoute(handleGenerate, {
   middlewares: [rateLimit(RATE_LIMITS.AI)],
 })
+
 
 
 
