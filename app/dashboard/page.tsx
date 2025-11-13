@@ -504,51 +504,6 @@ export default function DashboardPage() {
     (a, b) => (b.confidenceScore ?? 0) - (a.confidenceScore ?? 0)
   )
 
-  const quickActions: QuickAction[] = [
-    {
-      id: "resume",
-      title: "Update resume",
-      description: "Upload your latest resume for AI-powered feedback.",
-      icon: FileText,
-      onClick: () => {
-        logDashboardEvent("dashboard_quick_action_select", { actionId: "resume" })
-        fileInputRef.current?.click()
-      },
-    },
-    {
-      id: "suggestions",
-      title: "Get AI career suggestions",
-      description: "Generate fresh matches tailored to your goals.",
-      icon: Sparkles,
-      onClick: () => {
-        void handleGenerate()
-        setActiveTab("matches")
-      },
-      disabled: isGenerating,
-    },
-    {
-      id: "skills",
-      title: "Add a skill focus",
-      description: "Tell the coach what you’re actively improving.",
-      icon: ListChecks,
-      href: "/profile?section=skills",
-    },
-    {
-      id: "interview",
-      title: "Practice an interview",
-      description: "Run a mock interview to sharpen your storytelling.",
-      icon: CalendarCheck,
-      href: "/interview",
-    },
-    {
-      id: "roadmap",
-      title: "View roadmap",
-      description: "Track upcoming milestones and celebrate wins.",
-      icon: Compass,
-      href: "#career-roadmap",
-    },
-  ]
-
   if (isOverviewLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -809,12 +764,12 @@ export default function DashboardPage() {
         {/* Main column */}
         <div className="space-y-6">
           <Card>
-            <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex-1 min-w-0">
+            <CardHeader className="space-y-4 pb-4">
+              <div className="space-y-2">
                 <CardTitle className="text-lg sm:text-xl">Career Explorer</CardTitle>
                 <CardDescription className="text-sm">Navigate your matches, resume insights, interviews, and learning plan.</CardDescription>
               </div>
-              <div className="flex flex-wrap gap-2 text-xs sm:text-sm">
+              <div className="flex flex-wrap gap-2 sm:gap-2.5">
                 {TAB_OPTIONS.map((tab) => (
                   <button
                     key={tab.id}
@@ -824,14 +779,14 @@ export default function DashboardPage() {
                       logDashboardEvent("dashboard_tab_change", { tab: tab.id })
                     }}
                     className={cn(
-                      "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 transition",
+                      "inline-flex items-center gap-1.5 sm:gap-2 rounded-full border px-3 py-1.5 sm:px-3.5 sm:py-2 text-xs sm:text-sm transition-all",
                       activeTab === tab.id
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-text-secondary hover:border-primary/40 hover:text-text-primary"
+                        ? "border-primary bg-primary/10 text-primary shadow-sm"
+                        : "border-border text-text-secondary hover:border-primary/40 hover:text-text-primary hover:bg-muted/50"
                     )}
                   >
-                    <tab.icon className="h-4 w-4" />
-                    {tab.label}
+                    <tab.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
+                    <span className="whitespace-nowrap">{tab.label}</span>
                   </button>
                 ))}
               </div>
@@ -839,64 +794,6 @@ export default function DashboardPage() {
             <Separator />
             <CardContent className="pt-6">
               {renderTabContent(activeTab, overview, matches)}
-            </CardContent>
-          </Card>
-
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Next best actions</CardTitle>
-              <CardDescription>Stay in motion with guided tasks designed for quick wins.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
-              {quickActions.map((action) => {
-                const Icon = action.icon
-                const ButtonContent = (
-                  <>
-                    {action.title}
-                    <ArrowRight className="ml-2 h-3.5 w-3.5" />
-                  </>
-                )
-                return (
-                  <div
-                    key={action.id}
-                    className="flex h-full flex-col justify-between rounded-2xl border border-border/70 bg-card/70 p-4"
-                  >
-                    <div className="space-y-2">
-                      <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs uppercase tracking-wide text-primary">
-                        <Icon className="h-3.5 w-3.5" />
-                        Action
-                      </div>
-                      <h3 className="text-base font-semibold text-text-primary">{action.title}</h3>
-                      <p className="text-sm text-text-secondary">{action.description}</p>
-                    </div>
-                    <div className="mt-4">
-                      {action.href ? (
-                        <Button asChild size="sm" variant="outline" className="w-full">
-                          <Link
-                            href={action.href}
-                            onClick={() =>
-                              logDashboardEvent("dashboard_quick_action_select", { actionId: action.id })
-                            }
-                          >
-                            {ButtonContent}
-                          </Link>
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full"
-                          onClick={action.onClick}
-                          disabled={action.disabled}
-                        >
-                          {ButtonContent}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
             </CardContent>
           </Card>
         </div>
