@@ -155,6 +155,42 @@ export class UnifiedAIClient {
    * Call Perplexity API
    */
   private async callPerplexity(messages: ChatMessage[], options: ChatOptions): Promise<ChatResponse> {
+    // Check if Perplexity API key is available (treat empty strings as missing)
+    const rawPerplexityKey = process.env.PERPLEXITY_API_KEY || process.env.OPENAI_API_KEY
+    const rawGeminiKey = process.env.GEMINI_API_KEY
+    const perplexityApiKey = rawPerplexityKey?.trim() || null
+    const geminiApiKey = rawGeminiKey?.trim() || null
+
+    // If Perplexity key is missing and Gemini is available, use Gemini fallback
+    if (!perplexityApiKey && geminiApiKey) {
+      console.warn('Perplexity API key not set, using Gemini fallback in UnifiedAIClient')
+      const { callGeminiAPI, GEMINI_DEFAULT_MODEL } = await import('../openai')
+      // Use Gemini model instead of Perplexity model
+      const geminiModel = options.model && options.model.startsWith('gemini-') 
+        ? options.model 
+        : GEMINI_DEFAULT_MODEL
+      console.log('Using Gemini model:', geminiModel, '(original model was:', options.model, ')')
+      const result = await callGeminiAPI(messages, {
+        model: geminiModel,
+        temperature: options.temperature,
+        maxTokens: options.maxTokens,
+      })
+      return {
+        content: result.content,
+        model: result.model,
+      }
+    }
+
+    // If neither API key is available, throw error
+    if (!perplexityApiKey && !geminiApiKey) {
+      throw new Error('Neither PERPLEXITY_API_KEY nor GEMINI_API_KEY is set. Please configure at least one API key.')
+    }
+
+    // Safety check: ensure Perplexity key exists before calling getPerplexityHeaders()
+    if (!perplexityApiKey) {
+      throw new Error('Perplexity API key is required but not set. Please configure PERPLEXITY_API_KEY or use GEMINI_API_KEY.')
+    }
+
     const headers = getPerplexityHeaders()
     const model = options.model || this.defaultModel
 
@@ -202,6 +238,20 @@ export class UnifiedAIClient {
     messages: ChatMessage[],
     options: ChatOptions
   ): Promise<StreamingResponse> {
+    // Check if Perplexity API key is available (treat empty strings as missing)
+    const rawPerplexityKey = process.env.PERPLEXITY_API_KEY || process.env.OPENAI_API_KEY
+    const rawGeminiKey = process.env.GEMINI_API_KEY
+    const perplexityApiKey = rawPerplexityKey?.trim() || null
+    const geminiApiKey = rawGeminiKey?.trim() || null
+
+    // If Perplexity key is missing, throw error (streaming not supported for Gemini fallback yet)
+    if (!perplexityApiKey) {
+      if (geminiApiKey) {
+        throw new Error('Streaming not supported with Gemini fallback. Use non-streaming chat() method instead.')
+      }
+      throw new Error('PERPLEXITY_API_KEY is not set and streaming requires Perplexity.')
+    }
+
     const headers = getPerplexityHeaders()
     const model = options.model || this.defaultModel
 

@@ -72,11 +72,11 @@ npm install
 
 You can use the default `defaultdb` database that comes with your Aiven MySQL service, or create a custom database:
 
-**Option 1: Use Default Database (Recommended)**
+**Option 1: Use Default Database**
 - Use `defaultdb` - no additional setup needed
 - This is the simplest option and works out of the box
 
-**Option 2: Create Custom Database (Optional)**
+**Option 2: Create Custom Database**
 1. In the Aiven Console → Your MySQL service → **"Databases"** tab
 2. Click **"Create database"**
 3. Name it: `chatbot_ai` (or your preferred name)

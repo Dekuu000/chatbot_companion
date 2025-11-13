@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { shouldUseAdvisorFlow } from '@/lib/ai/advisor-routing'
-import { getPerplexityHeaders, PERPLEXITY_API_URL, PERPLEXITY_DEFAULT_MODEL } from '@/lib/openai'
+import { PERPLEXITY_DEFAULT_MODEL, callAIWithFallback } from '@/lib/openai'
 import { sanitizeAssistantContent } from '@/lib/ai/chat-response'
 import { parseAdvisorMarkdown, type AdvisorMarkdown } from '@/utils/aiResponseValidator'
 import { prisma } from '@/lib/prisma'
@@ -11,19 +11,13 @@ type Message = {
 }
 
 async function callModel(messages: Message[]): Promise<string> {
-  const response = await fetch(PERPLEXITY_API_URL, {
-    method: 'POST',
-    headers: getPerplexityHeaders(),
-    body: JSON.stringify({
-      model: PERPLEXITY_DEFAULT_MODEL,
-      messages,
-      max_tokens: 800,
-      temperature: 0.3,
-    }),
+  // Use fallback function: try Perplexity first, fallback to Gemini on error
+  const result = await callAIWithFallback(messages, {
+    model: PERPLEXITY_DEFAULT_MODEL,
+    maxTokens: 800,
+    temperature: 0.3,
   })
-
-  const json = await response.json().catch(() => ({}))
-  return json?.choices?.[0]?.message?.content ?? json?.choices?.[0]?.text ?? ''
+  return result.content
 }
 
 const DIRECT_PROMPT =

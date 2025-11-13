@@ -86,7 +86,15 @@ export class InterviewService {
 For each question, provide:
 - question: The interview question
 - difficulty: "${difficulty}"
-- guidelines: Detailed answer guidelines (use STAR method for behavioral questions)
+- guidelines: Well-structured answer guidelines. For behavioral questions, use the STAR method formatted as:
+  "Use the STAR method:
+  
+  Situation: Describe the project or module and the state of the code.
+  Task: Explain the goal (e.g., fix a critical bug, add a new feature, improve stability).
+  Action: Detail the steps taken: prioritizing bugs, writing unit/integration tests before refactoring (to establish a baseline), isolating problematic areas, and documenting changes.
+  Result: What was the outcome? (e.g., stability improved by X%, documentation updated, risk reduced.)"
+  
+  Format guidelines with clear line breaks, minimal markdown formatting, and easy-to-read structure. Avoid excessive bold markers.
 - category: "behavioral" | "technical" | "situational"
 
 Respond with a JSON object containing an array called "questions".`,
@@ -160,7 +168,12 @@ Respond with a JSON object containing an array called "questions".`,
       {
         question: `Tell me about a time you faced a tough challenge while working on a project relevant to ${title}. How did you handle it?`,
         guidelines:
-          'Use the STAR method: Situation, Task, Action, Result. Focus on your role, the skills you applied, and what changed at the end.',
+          `Use the STAR method:
+
+Situation: Describe the project context and the specific challenge you encountered.
+Task: Explain your goal and what needed to be accomplished.
+Action: Detail the steps you took, including the skills you applied and your problem-solving approach.
+Result: Share the outcome and what changed as a result of your actions.`,
         difficulty: 'medium' as const,
         category: 'situational',
       },

@@ -35,7 +35,21 @@ export function handleError(error: unknown): NextResponse {
   }
 
   // Handle generic errors
-  const response = formatErrorResponse(error, shouldIncludeDetails())
+  const baseResponse = formatErrorResponse(error, shouldIncludeDetails())
+  
+  // Add additional debugging info in development
+  const response = shouldIncludeDetails() && error instanceof Error
+    ? {
+        ...baseResponse,
+        stack: error.stack,
+        type: error.constructor?.name || typeof error,
+        apiKeys: {
+          hasPerplexity: !!(process.env.PERPLEXITY_API_KEY?.trim()),
+          hasGemini: !!(process.env.GEMINI_API_KEY?.trim()),
+        },
+      }
+    : baseResponse
+  
   return NextResponse.json(response, { status: 500 })
 }
 

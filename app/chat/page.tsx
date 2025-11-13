@@ -525,8 +525,35 @@ export default function ChatPage() {
       })
 
       if (!response.ok) {
-        const statusText = response.statusText || 'Unknown error'
-        throw new Error(`Server error (${response.status}): ${statusText}`)
+        let errorMessage = `Server error (${response.status}): ${response.statusText || 'Unknown error'}`
+        try {
+          const errorData = await response.json()
+          console.error('Server error details:', errorData)
+          
+          // Handle different error response formats
+          if (errorData.message) {
+            errorMessage = errorData.message
+          } else if (errorData.error) {
+            errorMessage = errorData.error
+          }
+          
+          // Add additional details if available
+          if (errorData.details) {
+            errorMessage += ` - ${typeof errorData.details === 'string' ? errorData.details : JSON.stringify(errorData.details)}`
+          }
+          
+          // Add API key status if available
+          if (errorData.apiKeys) {
+            errorMessage += ` [Perplexity: ${errorData.apiKeys.hasPerplexity ? '✓' : '✗'}, Gemini: ${errorData.apiKeys.hasGemini ? '✓' : '✗'}]`
+          }
+          
+          // Log full error for debugging
+          console.error('Full error response:', JSON.stringify(errorData, null, 2))
+        } catch (e) {
+          // If we can't parse error JSON, use status text
+          console.error('Could not parse error response:', e)
+        }
+        throw new Error(errorMessage)
       }
 
       const data = await response.json()

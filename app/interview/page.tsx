@@ -631,11 +631,13 @@ export default function InterviewPage() {
             <p className="text-lg text-text-primary mb-4">{currentQ.question}</p>
             {currentQ.guidelines && (
               <div className="p-4 bg-muted rounded-xl">
-                <div className="flex items-start gap-2 mb-2">
+                <div className="flex items-start gap-2 mb-3">
                   <AlertCircle className="h-4 w-4 text-primary mt-0.5" />
                   <span className="text-sm font-medium text-text-primary">Answer Guidelines</span>
                 </div>
-                <p className="text-sm text-text-secondary">{currentQ.guidelines}</p>
+                <div className="text-sm text-text-secondary whitespace-pre-line leading-relaxed">
+                  {currentQ.guidelines}
+                </div>
               </div>
             )}
           </div>

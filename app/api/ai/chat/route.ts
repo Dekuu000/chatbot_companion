@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getPerplexityHeaders, PERPLEXITY_API_URL, PERPLEXITY_DEFAULT_MODEL, buildCareerGuideUserPrompt } from '@/lib/openai'
+import { PERPLEXITY_DEFAULT_MODEL, buildCareerGuideUserPrompt, callAIWithFallback } from '@/lib/openai'
 import { z } from 'zod'
 // buildBriefProfileContext and buildProfileContext will be lazy imported
 import { sanitizeWithLimit } from '@/lib/utils/sanitization'
@@ -32,17 +32,18 @@ const chatSchema = z.object({
 })
 
 async function handleChat(request: NextRequest) {
-  // Lazy import to prevent Prisma initialization during build
-  const { prisma } = await import('@/lib/prisma')
-  const { analyticsService } = await import('@/lib/services/analytics.service')
-  let body: any
   try {
-    body = await request.json()
-    console.log('Chat request received:', { hasBody: !!body, hasMessage: !!body?.message, hasUserId: !!body?.userId })
-  } catch (err) {
-    console.error('Error parsing request body:', err)
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
-  }
+    // Lazy import to prevent Prisma initialization during build
+    const { prisma } = await import('@/lib/prisma')
+    const { analyticsService } = await import('@/lib/services/analytics.service')
+    let body: any
+    try {
+      body = await request.json()
+      console.log('Chat request received:', { hasBody: !!body, hasMessage: !!body?.message, hasUserId: !!body?.userId })
+    } catch (err) {
+      console.error('Error parsing request body:', err)
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    }
 
   const parseResult = chatSchema.safeParse(body)
   if (!parseResult.success) {
@@ -185,8 +186,6 @@ async function handleChat(request: NextRequest) {
     return streamResponse(convId, isNewConversation, response)
   }
 
-  const headers = getPerplexityHeaders()
-
   const coachingContext = deriveCoachingContext({
     message: sanitizedMessage,
     intent,
@@ -255,29 +254,58 @@ async function handleChat(request: NextRequest) {
 
   let assistantText = ''
   try {
-    const response = await fetch(PERPLEXITY_API_URL, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        model: PERPLEXITY_DEFAULT_MODEL,
-        messages: promptMessages,
-        temperature: 0.35,
-        stream: false,
-      }),
+    console.log('Starting AI call with fallback, message count:', promptMessages.length)
+    console.log('Prompt messages preview:', promptMessages.map(m => ({ role: m.role, contentLength: m.content.length })))
+    
+    // Use fallback function: try Perplexity first, fallback to Gemini on error
+    const result = await callAIWithFallback(promptMessages, {
+      model: PERPLEXITY_DEFAULT_MODEL,
+      temperature: 0.35,
+      stream: false,
     })
 
-    if (!response.ok) {
-      throw new Error(await response.text())
-    }
+    console.log('AI call completed:', {
+      provider: result.provider,
+      model: result.model,
+      contentLength: result.content?.length || 0,
+      hasContent: !!result.content,
+    })
 
-    const json = await response.json().catch(() => null)
-    const content = json?.choices?.[0]?.message?.content
-
-    if (content && typeof content === 'string') {
-      assistantText = stripInternalThought(content.trim())
+    if (result.content && typeof result.content === 'string') {
+      assistantText = stripInternalThought(result.content)
+      console.log('Processed assistant text length:', assistantText.length)
+      // Log which provider was used (for debugging)
+      if (result.provider === 'gemini') {
+        console.log('✅ Used Gemini fallback for chat response')
+      }
+    } else {
+      console.warn('⚠️ AI response was empty or invalid:', {
+        result,
+        contentType: typeof result.content,
+        hasContent: !!result.content,
+      })
     }
   } catch (error) {
-    console.error('Model error:', error)
+    console.error('❌ Model error caught:', error)
+    // Log detailed error information
+    if (error instanceof Error) {
+      console.error('Error name:', error.name)
+      console.error('Error message:', error.message)
+      console.error('Error stack:', error.stack)
+      
+      // If it's an API key error, we should still try to use fallback
+      if (error.message.includes('API key') || error.message.includes('not set')) {
+        console.warn('API key error detected, will use fallback response')
+        // Don't throw, let fallback handle it
+      } else {
+        // For other errors, log but continue with fallback
+        console.warn('Non-API-key error, will use fallback response')
+      }
+    } else {
+      console.error('Non-Error object:', JSON.stringify(error, null, 2))
+    }
+    // Continue with fallback builder - don't throw, let the fallback handle it
+    // assistantText will remain empty, and fallback will be used
   }
 
   const hasTargetContext =
@@ -336,7 +364,34 @@ async function handleChat(request: NextRequest) {
     }
   }
 
-  return streamResponse(convId, isNewConversation, finalResponse)
+    return streamResponse(convId, isNewConversation, finalResponse)
+  } catch (error) {
+    console.error('❌ handleChat error caught:', error)
+    console.error('Error type:', typeof error)
+    console.error('Error constructor:', error?.constructor?.name)
+    
+    if (error instanceof Error) {
+      console.error('Error name:', error.name)
+      console.error('Error message:', error.message)
+      console.error('Error stack:', error.stack)
+    } else {
+      console.error('Non-Error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2))
+    }
+    
+    // Return detailed error for debugging (always include details for now)
+    const errorDetails = {
+      error: 'Failed to process chat request',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      type: error?.constructor?.name || typeof error,
+      // Include API key status for debugging
+      apiKeys: {
+        hasPerplexity: !!(process.env.PERPLEXITY_API_KEY?.trim()),
+        hasGemini: !!(process.env.GEMINI_API_KEY?.trim()),
+      },
+    }
+    return NextResponse.json(errorDetails, { status: 500 })
+  }
 }
 
 function streamResponse(convId: string | null, isNewConversation: boolean, content: string) {
@@ -363,12 +418,32 @@ function streamResponse(convId: string | null, isNewConversation: boolean, conte
 
 // Export handler directly to avoid build-time analysis of secureRoute wrapper
 export async function POST(request: NextRequest) {
-  // Lazy import secureRoute and rateLimit to prevent any build-time analysis
-  const { secureRoute } = await import('@/lib/middleware/route-guards')
-  const { rateLimit, RATE_LIMITS } = await import('@/lib/middleware/rate-limit')
-  const handler = secureRoute(handleChat, {
-    allowGuest: true,
-    middlewares: [rateLimit(RATE_LIMITS.AI)],
-  })
-  return handler(request)
+  try {
+    // Lazy import secureRoute and rateLimit to prevent any build-time analysis
+    const { secureRoute } = await import('@/lib/middleware/route-guards')
+    const { rateLimit, RATE_LIMITS } = await import('@/lib/middleware/rate-limit')
+    const handler = secureRoute(handleChat, {
+      allowGuest: true,
+      middlewares: [rateLimit(RATE_LIMITS.AI)],
+    })
+    return handler(request)
+  } catch (error) {
+    console.error('POST handler error:', error)
+    if (error instanceof Error) {
+      console.error('Error message:', error.message)
+      console.error('Error stack:', error.stack)
+    }
+    const errorDetails = {
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      type: error?.constructor?.name || typeof error,
+      // Include API key status for debugging
+      apiKeys: {
+        hasPerplexity: !!(process.env.PERPLEXITY_API_KEY?.trim()),
+        hasGemini: !!(process.env.GEMINI_API_KEY?.trim()),
+      },
+    }
+    return NextResponse.json(errorDetails, { status: 500 })
+  }
 }
