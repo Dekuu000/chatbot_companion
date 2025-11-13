@@ -399,7 +399,7 @@ Extract ALL skills from all sections (technical, business, healthcare, education
  * Minimal hardcoded fallback - only used when AI is completely unavailable
  * Provides basic structure without specific recommendations
  */
-function buildMinimalFallbackAnalysis(resumeText: string): ResumeAnalysisResult {
+export function buildMinimalFallbackAnalysis(resumeText: string): ResumeAnalysisResult {
   const cleaned = resumeText.replace(/\s+/g, ' ').trim()
   const wordCount = cleaned ? cleaned.split(' ').length : 0
 

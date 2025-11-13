@@ -16,7 +16,7 @@ async function handleAnalyze(request: NextRequest) {
   const { prisma } = await import('@/lib/prisma')
   const { ensureProfile } = await import('@/lib/profile')
   const { buildBriefProfileContext } = await import('@/lib/utils/profile-context')
-  const { analyzeResumeWithAI, buildFallbackResumeAnalysis } = await import('@/lib/services/resume.service')
+  const { analyzeResumeWithAI, buildMinimalFallbackAnalysis } = await import('@/lib/services/resume.service')
   const { parseConversationTags } = await import('@/lib/ai/conversation-state')
   
   const body = await request.json()
@@ -103,7 +103,7 @@ async function handleAnalyze(request: NextRequest) {
     )
   } catch (error) {
     console.error('resume_analysis_error', error)
-    analysis = buildFallbackResumeAnalysis(resume.extractedText ?? '')
+    analysis = buildMinimalFallbackAnalysis(resume.extractedText ?? '')
     isFallback = true
   }
 
