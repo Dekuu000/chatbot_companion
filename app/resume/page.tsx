@@ -34,6 +34,7 @@ export default function ResumePage() {
   const [session, setSession] = useState<UserSession | null>(null)
   const [sessionInitialized, setSessionInitialized] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const uploadButtonRef = useRef<HTMLButtonElement>(null)
   const [currentStep, setCurrentStep] = useState(0)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
@@ -59,6 +60,19 @@ export default function ResumePage() {
     setSession(getSession())
     setSessionInitialized(true)
   }, [])
+
+  // Scroll to upload button when a file is selected
+  useEffect(() => {
+    if (uploadedFile && uploadButtonRef.current) {
+      // Small delay to ensure the button is rendered
+      setTimeout(() => {
+        uploadButtonRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        })
+      }, 100)
+    }
+  }, [uploadedFile])
 
   const handleFileSelect = (file: File) => {
     if (file.type !== "application/pdf") {
@@ -345,7 +359,12 @@ export default function ResumePage() {
             )}
 
             {uploadedFile && !isUploading && (
-              <Button onClick={handleUpload} className="w-full" size="lg">
+              <Button 
+                ref={uploadButtonRef}
+                onClick={handleUpload} 
+                className="w-full" 
+                size="lg"
+              >
                 Upload & Continue
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
