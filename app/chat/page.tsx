@@ -849,7 +849,7 @@ export default function ChatPage() {
       </div>
 
       {/* Input Area */}
-      <div className="fixed inset-x-0 md:left-64 bottom-0 z-20 border-t border-border bg-gradient-to-b from-bg via-bg/95 to-bg/85 backdrop-blur-md">
+      <div className="fixed inset-x-0 md:left-64 lg:left-72 bottom-0 z-20 border-t border-border bg-gradient-to-b from-bg via-bg/95 to-bg/85 backdrop-blur-md">
         <div className="max-w-4xl mx-auto w-full px-3 sm:px-4 pb-4 sm:pb-6 pt-3 sm:pt-4">
           <form onSubmit={handleSend} className="relative space-y-3">
             <input
