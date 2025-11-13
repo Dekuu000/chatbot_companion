@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { PERPLEXITY_DEFAULT_MODEL, buildCareerGuideUserPrompt, callAIWithFallback } from '@/lib/openai'
+import { PERPLEXITY_DEFAULT_MODEL, buildCareerGuideUserPrompt, callAIWithFallback, type ChatMessage } from '@/lib/openai'
 import { z } from 'zod'
 // buildBriefProfileContext and buildProfileContext will be lazy imported
 import { sanitizeWithLimit } from '@/lib/utils/sanitization'
@@ -247,7 +247,7 @@ async function handleChat(request: NextRequest) {
     recommendedCareers: coachingContext.recommendedCareers,
   })
 
-  const promptMessages = [
+  const promptMessages: ChatMessage[] = [
     { role: 'system', content: systemPrompt },
     { role: 'user', content: enrichedPrompt },
   ]
