@@ -102,7 +102,7 @@ async function handleChat(request: NextRequest) {
 
   const personaContext = `Stage: ${userStage}\nGuidance focus: ${USER_STAGE_FOCUS[userStage]}\nKeep tone friendly, concise, and Philippines-specific.`
 
-  async function saveMessage(convId: string | null, role: 'user' | 'assistant', content: string) {
+  const saveMessage = async (convId: string | null, role: 'user' | 'assistant', content: string) => {
     if (isAnonymous || !convId) return
     try {
       await prisma.chatMessage.create({
