@@ -370,11 +370,11 @@ export function getRoleInsight(role: string | null | undefined): RoleInsight | n
     
     if (hasTechKeyword) {
       // Default to software engineer for tech roles
-      insight = ROLE_INSIGHTS.find(i => i.role === 'software engineer') || null
+      insight = ROLE_INSIGHTS.find(i => i.role === 'software engineer')
     }
   }
   
-  return insight || null
+  return insight ?? null
 }
 
 export function getLocalizedResources({
