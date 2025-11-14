@@ -128,6 +128,7 @@ export interface SystemPromptConfig {
   learningTracks?: Array<{ title: string; url: string }>
   interestLabel?: string | null
   recommendedCareers?: string[]
+  hasConversationHistory?: boolean
 }
 
 /**
@@ -171,6 +172,13 @@ export function buildSystemPrompt(config: SystemPromptConfig): string {
           .join('\n')}`
       )
     }
+  }
+
+  // Add conversation history indicator
+  if (config.hasConversationHistory) {
+    context.push(
+      'CONVERSATION HISTORY AVAILABLE: Previous messages in this conversation are included in the message history. Use this context to answer follow-up questions directly. Do NOT ask for clarification if the question can be answered from the conversation history.'
+    )
   }
 
   if (config.mode === 'guest') {
@@ -813,9 +821,29 @@ function targetedPlan(context: CoachingContext): string {
   return formatAdvisorCoachMessage(`Your ${roleName} Strategy`, insights, nextSteps, question)
 }
 
-export function buildPersonalizedCoachPlan(context: CoachingContext): string {
-  if (!context.targetDisplay) {
+export function buildPersonalizedCoachPlan(context: CoachingContext, hasConversationHistory: boolean = false): string {
+  // Never generate clarification if conversation history exists - use context from history instead
+  if (!context.targetDisplay && !hasConversationHistory) {
     return clarificationPlan(context)
+  }
+  // If we have conversation history but no target, try to infer from context or provide a general response
+  if (!context.targetDisplay && hasConversationHistory) {
+    // Use a general career guidance response instead of clarification
+    const interest = context.interestLabel || 'career development'
+    return formatAdvisorCoachMessage(
+      `Your ${interest} Journey`,
+      [
+        'Build on your current progress → Use what you\'ve shared to refine your path → Review previous conversation to identify patterns.',
+        'Focus on actionable next steps → Move from exploration to execution → Pick one skill or project to prioritize this week.',
+        'Connect with the PH tech community → Networking accelerates opportunities → Join one local meetup or online community this month.',
+      ],
+      [
+        'Review your previous messages and identify one key insight to act on.',
+        'Choose one specific skill or project to focus on this week.',
+        'Reach out to one professional in your target field for a quick chat.',
+      ],
+      'What specific aspect of your career path would you like to dive deeper into?'
+    )
   }
   return targetedPlan(context)
 }

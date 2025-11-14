@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getLocalizedResources, describeMarketSnapshot } from '@/lib/content/ph-knowledge'
+import { getLocalizedResources, describeMarketSnapshot, extractJobTitle } from '@/lib/content/ph-knowledge'
 
 // Force dynamic rendering - this route should not be statically analyzed during build
 export const dynamic = 'force-dynamic'
@@ -344,11 +344,42 @@ async function handleOverview(request: NextRequest) {
       ? parseConversationTags((latestConversation as any)?.contextTags ?? null)
       : null
     const focusContext = (() => {
-      const targetRole = parsedConversationTags?.targetRole ?? profile.goals?.trim() ?? null
-      if (!targetRole && !parsedConversationTags) return null
+      // Extract job title from profile goals if available
+      const extractedJobTitle = profile.goals?.trim() ? extractJobTitle(profile.goals.trim()) : null
       
-      // Determine the source of targetRole to set accurate timestamp
-      const isFromProfile = !parsedConversationTags?.targetRole && profile.goals?.trim()
+      // Determine which targetRole to use based on recency
+      let targetRole: string | null = null
+      let isFromProfile = false
+      
+      // Compare timestamps to determine priority
+      const profileUpdatedAt = profile.updatedAt instanceof Date
+        ? profile.updatedAt.getTime()
+        : new Date(profile.updatedAt || 0).getTime()
+      const conversationUpdatedAt = latestConversation?.lastMessageAt
+        ? (latestConversation.lastMessageAt instanceof Date
+            ? latestConversation.lastMessageAt.getTime()
+            : new Date(latestConversation.lastMessageAt).getTime())
+        : 0
+      
+      // If profile was updated more recently and has extracted job title, use it
+      if (extractedJobTitle && profileUpdatedAt >= conversationUpdatedAt) {
+        targetRole = extractedJobTitle
+        isFromProfile = true
+      } else if (parsedConversationTags?.targetRole) {
+        // Otherwise, use conversation tags if available
+        targetRole = parsedConversationTags.targetRole
+        isFromProfile = false
+      } else if (extractedJobTitle) {
+        // Fallback to extracted job title even if conversation is newer
+        targetRole = extractedJobTitle
+        isFromProfile = true
+      } else if (profile.goals?.trim()) {
+        // Last resort: use profile goals as-is if no extraction worked
+        targetRole = profile.goals.trim()
+        isFromProfile = true
+      }
+      
+      if (!targetRole && !parsedConversationTags) return null
       
       return {
         targetRole,

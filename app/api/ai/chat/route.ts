@@ -64,6 +64,17 @@ async function handleChat(request: NextRequest) {
   let conversationHistory: HistoryMessage[] = []
   let previousTags: ConversationTags | null = null
 
+  // Comprehensive logging for conversation history loading
+  console.log('📋 Conversation History Loading:', {
+    conversationId: convId,
+    userId,
+    isAnonymous,
+    hasConversationId: !!convId,
+    hasUserId: !!userId,
+  })
+
+  // Try to load conversation history for authenticated users
+  // For guest users, we still check if conversationId exists (safety check will prevent clarification)
   if (!isAnonymous && userId) {
     try {
       // Lazy import loadConversationState to prevent Prisma type analysis during build
@@ -78,9 +89,44 @@ async function handleChat(request: NextRequest) {
       resumeSnapshot = state.resume
       conversationHistory = state.history
       previousTags = state.tags
+      
+      console.log('✅ Conversation history loaded:', {
+        historyLength: conversationHistory.length,
+        hasProfile: !!profile,
+        hasResume: !!resumeSnapshot,
+        hasTags: !!previousTags,
+        historyMessages: conversationHistory.map(m => ({ role: m.role, contentLength: m.content.length })),
+      })
+      
+      // Warning if conversationId exists but history is empty
+      if (convId && conversationHistory.length === 0) {
+        console.warn('⚠️ WARNING: conversationId exists but history is empty!', {
+          conversationId: convId,
+          userId,
+          message: 'This might indicate a problem loading history from database',
+        })
+      }
     } catch (error) {
-      console.error('conversation_state_error', error)
+      console.error('❌ Conversation state error:', error)
+      console.error('Error details:', {
+        conversationId: convId,
+        userId,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      })
     }
+  } else {
+    // For guest/anonymous users, we can't load history from DB (requires userId)
+    // But if conversationId exists, the safety check will prevent clarification
+    console.log('ℹ️ Skipping history load from DB:', {
+      reason: isAnonymous ? 'anonymous/guest user (no userId)' : 'no userId',
+      conversationId: convId,
+      userId,
+      note: convId ? 'conversationId exists - safety check will prevent clarification' : 'no conversationId - may be new conversation',
+    })
+    
+    // Note: Guest users typically don't have persisted conversations in DB
+    // But if conversationId is passed, it indicates an ongoing conversation
+    // The safety check (convId && intent === 'clarification') will handle this case
   }
 
   // Lazy import buildProfileContext to prevent Prisma type analysis during build
@@ -96,8 +142,34 @@ async function handleChat(request: NextRequest) {
   const interestLabel = detectedInterestLabel || describeInterest(interestKey) || null
   const interestCareers = mapInterestToCareers(interestKey)
 
-  if (messageIsAmbiguous(sanitizedMessage)) {
+  // Never mark salary questions as clarification - they should always be answered directly
+  const isSalaryQuestion = /salary|how much|pay|compensation|wage|salary range/i.test(sanitizedMessage)
+  if (isSalaryQuestion && intent !== 'salary') {
+    intent = 'salary'
+    console.log('Detected salary question, setting intent to salary')
+  }
+  
+  // Only mark as clarification if message is ambiguous AND no conversation history exists
+  // If conversation history exists, use it to provide context even for short follow-up questions
+  // NEVER mark salary questions as clarification
+  if (messageIsAmbiguous(sanitizedMessage) && conversationHistory.length === 0 && !isSalaryQuestion) {
     intent = 'clarification'
+  }
+  
+  // CRITICAL: If conversation history exists, NEVER use clarification intent
+  // Override to 'career' intent which will provide actionable guidance
+  if (conversationHistory.length > 0 && intent === 'clarification') {
+    intent = 'career'
+    console.log('Overriding clarification intent to career because conversation history exists')
+  }
+  
+  // SAFETY CHECK: If conversationId exists, we're in an ongoing conversation
+  // NEVER ask for clarification even if history didn't load from DB
+  // This prevents clarification when there's a technical issue loading history
+  if (convId && intent === 'clarification') {
+    intent = 'career'
+    console.log('🛡️ SAFETY: Overriding clarification intent to career because conversationId exists')
+    console.log('Reason: conversationId indicates ongoing conversation, even if history didnt load')
   }
 
   const personaContext = `Stage: ${userStage}\nGuidance focus: ${USER_STAGE_FOCUS[userStage]}\nKeep tone friendly, concise, and Philippines-specific.`
@@ -225,6 +297,7 @@ async function handleChat(request: NextRequest) {
     learningTracks: learningTracks.length ? learningTracks : undefined,
     interestLabel: coachingContext.interestLabel ?? null,
     recommendedCareers: coachingContext.recommendedCareers,
+    hasConversationHistory: conversationHistory.length > 0,
   })
 
   const enrichedPrompt = buildCareerGuideUserPrompt({
@@ -247,14 +320,53 @@ async function handleChat(request: NextRequest) {
     recommendedCareers: coachingContext.recommendedCareers,
   })
 
+  // Convert conversation history to ChatMessage format and limit to last 15 messages
+  const historyMessages: ChatMessage[] = conversationHistory
+    .slice(-15) // Limit to last 15 messages to avoid token limits
+    .map((msg) => ({
+      role: msg.role as 'user' | 'assistant',
+      content: msg.content,
+    }))
+
+  // Build prompt messages: system prompt, then conversation history (if any), then current user message
   const promptMessages: ChatMessage[] = [
     { role: 'system', content: systemPrompt },
+    ...historyMessages, // Include conversation history between system prompt and current message
     { role: 'user', content: enrichedPrompt },
   ]
+
+  // VERIFICATION: Verify that history messages are actually included
+  const systemMessageCount = promptMessages.filter(m => m.role === 'system').length
+  const historyMessageCount = promptMessages.filter(m => m.role === 'user' || m.role === 'assistant').length - 1 // -1 for current user message
+  const currentUserMessageCount = promptMessages.filter(m => m.role === 'user').length - historyMessageCount
+  
+  console.log('🔍 Prompt Messages Verification:', {
+    totalMessages: promptMessages.length,
+    systemMessages: systemMessageCount,
+    historyMessages: historyMessageCount,
+    expectedHistoryMessages: historyMessages.length,
+    currentUserMessage: currentUserMessageCount,
+    historyIncluded: historyMessageCount === historyMessages.length,
+    messageBreakdown: promptMessages.map((m, i) => ({
+      index: i,
+      role: m.role,
+      contentLength: m.content.length,
+      isHistory: i > 0 && i < promptMessages.length - 1,
+    })),
+  })
+  
+  if (conversationHistory.length > 0 && historyMessageCount === 0) {
+    console.error('❌ CRITICAL: History exists but was NOT included in promptMessages!', {
+      conversationHistoryLength: conversationHistory.length,
+      historyMessagesLength: historyMessages.length,
+      promptMessagesLength: promptMessages.length,
+    })
+  }
 
   let assistantText = ''
   try {
     console.log('Starting AI call with fallback, message count:', promptMessages.length)
+    console.log('Conversation history included:', historyMessages.length, 'messages')
     console.log('Prompt messages preview:', promptMessages.map(m => ({ role: m.role, contentLength: m.content.length })))
     
     // Use fallback function: try Perplexity first, fallback to Gemini on error
@@ -312,10 +424,11 @@ async function handleChat(request: NextRequest) {
     Boolean(coachingContext.targetDisplay || coachingContext.targetRole || coachingContext.recommendedCareers.length)
 
   let usedFallback = false
+  const hasHistory = conversationHistory.length > 0
   const fallbackBuilder = () => {
     usedFallback = true
     if (hasTargetContext && intent !== 'skills') {
-      return buildPersonalizedCoachPlan(coachingContext)
+      return buildPersonalizedCoachPlan(coachingContext, hasHistory)
     }
     return buildIntentAwareFallback({
       intent,
@@ -326,8 +439,74 @@ async function handleChat(request: NextRequest) {
   }
 
   const vettedContent = enforceContextualRelevance(assistantText, coachingContext)
-  let finalResponse = vettedContent ? formatAdvisorResponse(vettedContent, fallbackBuilder) : fallbackBuilder()
-  finalResponse = formatAdvisorResponse(finalResponse, fallbackBuilder)
+  
+  // Log response flow for debugging
+  console.log('Response processing:', {
+    hasAssistantText: !!assistantText,
+    assistantTextLength: assistantText.length,
+    hasVettedContent: !!vettedContent,
+    vettedContentLength: vettedContent?.length || 0,
+    hasConversationHistory: hasHistory,
+    historyLength: conversationHistory.length,
+    intent,
+    hasTargetContext,
+  })
+  
+  if (vettedContent) {
+    console.log('Vetted content preview (first 200 chars):', vettedContent.substring(0, 200))
+  }
+  
+  // Only call formatAdvisorResponse once - it will handle fallback internally if needed
+  let finalResponse = vettedContent 
+    ? formatAdvisorResponse(vettedContent, fallbackBuilder, hasHistory)
+    : fallbackBuilder()
+  
+  // Post-processing: Aggressively filter out clarification responses when conversation history exists
+  if (hasHistory) {
+    const clarificationPatterns = [
+      /quick\s+clarification/i,
+      /are\s+you\s+asking\s+about/i,
+      /\(a\)\s+skills\s+to\s+learn/i,
+      /\(b\)\s+job\s+search\s+steps/i,
+      /\(c\)\s+resume[\/\s]*interview\s+help/i,
+      /clarify.*(?:skills|job|resume|interview)/i,
+      /which.*(?:are you|do you).*asking/i,
+    ]
+    
+    const containsClarification = clarificationPatterns.some(pattern => pattern.test(finalResponse))
+    
+    if (containsClarification) {
+      console.log('🚫 Post-processing: Detected clarification in final response, regenerating with fallback')
+      console.log('Original response preview:', finalResponse.substring(0, 200))
+      console.log('Detected intent:', intent, 'isSalaryQuestion:', isSalaryQuestion)
+      
+      // Never use clarification intent when history exists - use the detected intent or 'career' as default
+      const effectiveIntent = intent === 'clarification' ? 'career' : intent
+      
+      // Generate a direct answer based on the detected intent
+      if (hasTargetContext && effectiveIntent !== 'skills') {
+        // Use personalized coach plan which won't generate clarification when history exists
+        finalResponse = buildPersonalizedCoachPlan(coachingContext, hasHistory)
+        console.log('✅ Generated personalized coach plan instead of clarification')
+      } else {
+        // Use intent-aware fallback for all intents (career, skills, etc.)
+        finalResponse = buildIntentAwareFallback({
+          intent: effectiveIntent,
+          stage: userStage,
+          message: sanitizedMessage,
+          interestLabel: coachingContext.interestLabel,
+        })
+        console.log(`✅ Generated direct ${effectiveIntent} response instead of clarification`)
+      }
+    }
+  }
+  
+  console.log('Final response processing:', {
+    usedFallback,
+    finalResponseLength: finalResponse.length,
+    finalResponsePreview: finalResponse.substring(0, 200),
+    hasHistory,
+  })
 
   await analyticsService.trackEvent({
     userId: !isAnonymous && userId ? userId : undefined,

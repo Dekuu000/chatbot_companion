@@ -81,7 +81,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
 
   return (
     <SidebarContext.Provider value={sidebarContextValue}>
-      <div className="grid h-screen bg-bg md:grid-cols-[16rem_1fr] lg:grid-cols-[18rem_1fr]">
+      <div className="grid h-screen bg-bg md:grid-cols-[16rem_1fr] lg:grid-cols-[18rem_1fr] overflow-hidden">
         {/* Backdrop for mobile */}
       {showSidebar && isMobileSidebarOpen && (
         <div
@@ -95,7 +95,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
       {showSidebar ? (
         <>
           {/* Desktop Sidebar */}
-          <div className="hidden md:flex md:flex-col">
+          <div className="hidden md:flex md:flex-col md:h-full md:min-h-0 md:overflow-hidden">
             <ConversationSidebar />
           </div>
 

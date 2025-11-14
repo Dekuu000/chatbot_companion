@@ -248,18 +248,133 @@ function normalise(value: string | null | undefined): string | null {
   return value.toLowerCase().trim()
 }
 
+/**
+ * Extract job title from free-form career goals text
+ * Examples:
+ * - "My goal is to become a frontend developer" → "frontend developer"
+ * - "I want to be a software engineer" → "software engineer"
+ * - "I'm interested in data analyst" → "data analyst"
+ */
+export function extractJobTitle(goalsText: string | null | undefined): string | null {
+  if (!goalsText) return null
+  
+  const text = goalsText.trim()
+  if (!text) return null
+  
+  // Common patterns to extract job titles
+  const patterns = [
+    /my goal is to become (?:a|an) (.+?)(?:\.|$|,| and| or)/i,
+    /i want to be (?:a|an) (.+?)(?:\.|$|,| and| or)/i,
+    /i want to become (?:a|an) (.+?)(?:\.|$|,| and| or)/i,
+    /i'm interested in (.+?)(?:\.|$|,| and| or)/i,
+    /i am interested in (.+?)(?:\.|$|,| and| or)/i,
+    /my goal is to be (?:a|an) (.+?)(?:\.|$|,| and| or)/i,
+    /i want to work as (?:a|an) (.+?)(?:\.|$|,| and| or)/i,
+    /i aspire to be (?:a|an) (.+?)(?:\.|$|,| and| or)/i,
+    /i hope to become (?:a|an) (.+?)(?:\.|$|,| and| or)/i,
+  ]
+  
+  for (const pattern of patterns) {
+    const match = text.match(pattern)
+    if (match && match[1]) {
+      const extracted = match[1].trim()
+      // Remove trailing punctuation and common words
+      const cleaned = extracted.replace(/[.,;:!?]+$/, '').trim()
+      if (cleaned.length > 2) {
+        return cleaned
+      }
+    }
+  }
+  
+  // Fallback: look for common job title keywords
+  const jobKeywords = [
+    'developer', 'engineer', 'designer', 'analyst', 'manager',
+    'programmer', 'coder', 'architect', 'specialist', 'consultant'
+  ]
+  
+  const words = text.toLowerCase().split(/\s+/)
+  for (let i = 0; i < words.length - 1; i++) {
+    const twoWord = `${words[i]} ${words[i + 1]}`
+    const threeWord = i < words.length - 2 ? `${words[i]} ${words[i + 1]} ${words[i + 2]}` : null
+    
+    // Check if phrase contains job keywords
+    if (jobKeywords.some(keyword => twoWord.includes(keyword))) {
+      return twoWord
+    }
+    if (threeWord && jobKeywords.some(keyword => threeWord.includes(keyword))) {
+      return threeWord
+    }
+  }
+  
+  return null
+}
+
+// Role alias mappings: map common variations to recognized roles
+const ROLE_ALIASES: Record<string, string> = {
+  'frontend developer': 'software engineer',
+  'front-end developer': 'software engineer',
+  'front end developer': 'software engineer',
+  'backend developer': 'software engineer',
+  'back-end developer': 'software engineer',
+  'back end developer': 'software engineer',
+  'fullstack developer': 'software engineer',
+  'full-stack developer': 'software engineer',
+  'full stack developer': 'software engineer',
+  'web developer': 'software engineer',
+  'react developer': 'software engineer',
+  'vue developer': 'software engineer',
+  'angular developer': 'software engineer',
+  'javascript developer': 'software engineer',
+  'node developer': 'software engineer',
+  'python developer': 'software engineer',
+  'java developer': 'software engineer',
+  'mobile developer': 'software engineer',
+  'ios developer': 'software engineer',
+  'android developer': 'software engineer',
+  'programmer': 'software engineer',
+  'coder': 'software engineer',
+  'software developer': 'software engineer',
+  'ui designer': 'ux designer',
+  'ui/ux designer': 'ux designer',
+  'product designer': 'ux designer',
+  'interaction designer': 'ux designer',
+  'data scientist': 'data analyst',
+  'business analyst': 'data analyst',
+  'financial analyst': 'data analyst',
+  'product owner': 'product manager',
+  'project manager': 'product manager',
+}
+
 export function getRoleInsight(role: string | null | undefined): RoleInsight | null {
   const target = normalise(role)
   if (!target) return null
-  return ROLE_INSIGHTS.find((insight) => {
-    if (insight.role === target) return true
+  
+  // Check role aliases first
+  const mappedRole = ROLE_ALIASES[target] || target
+  
+  // Try exact match with mapped role
+  let insight = ROLE_INSIGHTS.find((insight) => {
+    if (insight.role === mappedRole) return true
     const normalizedDisplay = insight.displayName.toLowerCase()
-    if (normalizedDisplay === target) return true
-    if (target.includes(insight.role)) return true
-    if (target.includes(normalizedDisplay)) return true
+    if (normalizedDisplay === mappedRole) return true
+    if (mappedRole.includes(insight.role)) return true
+    if (mappedRole.includes(normalizedDisplay)) return true
     // allow partial matches like "web dev" to map to web developer
-    return normalizedDisplay.split(' ').every((word) => target.includes(word))
-  }) || null
+    return normalizedDisplay.split(' ').every((word) => mappedRole.includes(word))
+  })
+  
+  // If no match found, try fallback for tech-related roles
+  if (!insight) {
+    const techKeywords = ['developer', 'engineer', 'programmer', 'coder', 'architect']
+    const hasTechKeyword = techKeywords.some(keyword => mappedRole.includes(keyword))
+    
+    if (hasTechKeyword) {
+      // Default to software engineer for tech roles
+      insight = ROLE_INSIGHTS.find(i => i.role === 'software engineer') || null
+    }
+  }
+  
+  return insight || null
 }
 
 export function getLocalizedResources({

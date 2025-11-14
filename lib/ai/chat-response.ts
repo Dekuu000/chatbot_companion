@@ -37,7 +37,33 @@ FORMATTING & TONE
 
 - Be warm, factual, and goal-oriented. Correct poor assumptions kindly.
 
-- If user context is missing, ask one clarifying question instead of guessing.`
+RESPONSE STRUCTURE & READABILITY
+
+- ALWAYS format responses for easy reading: use line breaks between paragraphs, separate sections clearly, and structure information logically.
+
+- For direct answers (factual questions, salary ranges, definitions): use clear paragraphs with proper spacing. Break up long sentences. Use bullet points or numbered lists when listing multiple items.
+
+- For Advisor structure responses: ensure proper spacing between sections (headline, insights, next steps, question). Each section should be clearly separated with blank lines.
+
+- Use proper line breaks: add a blank line between paragraphs, after headings, and between list items for better readability.
+
+- Structure information hierarchically: main points first, then supporting details. Use formatting (bold, lists) to make key information stand out.
+
+CONVERSATION CONTEXT PRIORITY
+
+- CRITICAL: NEVER ask for clarification when conversation history exists. This is STRICTLY FORBIDDEN.
+
+- ALWAYS use conversation history when available. Previous messages provide context for follow-up questions.
+
+- Answer follow-up questions DIRECTLY using the conversation context. Do NOT ask "are you asking about (a), (b), or (c)" or any similar clarification questions when history exists.
+
+- When conversation history exists, ALL questions (including short ones) should be answered directly using the established context. Treat them as clear requests.
+
+- For salary questions (e.g., "how much is the salary range"), ALWAYS provide a direct answer with salary ranges for the Philippines market. NEVER ask for clarification.
+
+- Only ask for clarification when BOTH conversation history AND other context (profile, resume) are truly missing AND the question is genuinely ambiguous (e.g., first message with no context).
+
+- If you see conversation history in the messages, you MUST answer the question directly. Asking for clarification is a critical error that will be filtered out.`
 
 export type UserStage = 'college_student' | 'graduating_student' | 'career_planner'
 
@@ -682,15 +708,55 @@ function buildFormattedResponse(sections: AdvisorSections): string {
   ].join('\n')
 }
 
-export function formatAdvisorResponse(raw: string, fallback: () => string): string {
+export function formatAdvisorResponse(raw: string, fallback: () => string, hasConversationHistory: boolean = false): string {
   const cleaned = stripInternalThought(raw || '').trim()
   if (!cleaned) return fallback()
 
+  // Check if response is substantial (at least 50 characters) and doesn't look like an error
+  const isSubstantial = cleaned.length >= 50
+  const looksLikeError = /^(error|sorry|unable|failed|cannot)/i.test(cleaned)
+  
+  // Comprehensive pattern to catch all variations of clarification messages
+  // This catches: "Quick clarification", "are you asking about", "(a) skills to learn", etc.
+  const clarificationPatterns = [
+    /quick\s+clarification/i,
+    /are\s+you\s+asking\s+about/i,
+    /\(a\)\s+skills\s+to\s+learn/i,
+    /\(b\)\s+job\s+search\s+steps/i,
+    /\(c\)\s+resume[\/\s]*interview\s+help/i,
+    /clarify.*(?:skills|job|resume|interview)/i,
+    /which.*(?:are you|do you).*asking/i,
+  ]
+  
+  const looksLikeClarification = hasConversationHistory && clarificationPatterns.some(pattern => pattern.test(cleaned))
+  
+  // If we have conversation history and the response looks like clarification, reject it immediately
+  if (looksLikeClarification) {
+    console.log('🚫 Rejecting clarification response when conversation history exists')
+    console.log('Response preview:', cleaned.substring(0, 200))
+    return fallback()
+  }
+
+  // Try to extract Advisor structure sections
   const sections = extractSections(cleaned)
   if (sections) {
     return buildFormattedResponse(sections)
   }
 
+  // If response is substantial and doesn't look like an error, use it even without Advisor structure
+  // This allows direct answers to factual questions (like salary ranges)
+  if (isSubstantial && !looksLikeError) {
+    // Ensure proper formatting with line breaks for readability
+    const formatted = cleaned
+      .replace(/\n{3,}/g, '\n\n') // Normalize multiple line breaks
+      .replace(/([.!?])\s+([A-Z])/g, '$1\n\n$2') // Add line breaks after sentences
+      .trim()
+    
+    console.log('Using substantial response without Advisor structure')
+    return formatted
+  }
+
+  // Only fall back if response is empty, too short, or looks like an error
   return fallback()
 }
 

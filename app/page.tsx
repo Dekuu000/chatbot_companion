@@ -26,16 +26,7 @@ export default function Home() {
         <p className="text-base sm:text-lg md:text-xl text-text-secondary mb-6 sm:mb-8">
           Get personalized career recommendations powered by AI, tailored to your skills, interests, and goals.
         </p>
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
-          <Link
-            href={careerMatchesHref}
-            className={cn(
-              "inline-flex items-center justify-center whitespace-nowrap rounded-2xl text-sm sm:text-base font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-11 sm:h-12 px-6 sm:px-8"
-            )}
-          >
-            Career Matches
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
+        <div className="flex justify-center">
           <Link
             href="/chat"
             className={cn(

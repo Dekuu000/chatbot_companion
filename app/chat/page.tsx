@@ -510,15 +510,15 @@ export default function ChatPage() {
     advisorFlow: boolean
   ) => {
     try {
-      const response = await fetch('/api/ai-call', {
+      // Use the new /api/ai/chat route which has better conversation history handling
+      const response = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...analyticsHeaders,
         },
         body: JSON.stringify({
-          conversation: history,
-          userMessage: message,
-          advisorFlow,
+          message,
           conversationId,
           userId,
         }),
@@ -556,16 +556,78 @@ export default function ChatPage() {
         throw new Error(errorMessage)
       }
 
-      const data = await response.json()
+      // Handle Server-Sent Events (SSE) streaming response
+      const contentType = response.headers.get('content-type') || ''
+      let finalContent = ''
+      let nextConvId: string | null = conversationId
 
-      if (!data?.ok) {
-        throw new Error(data?.error || 'Model response error')
+      if (contentType.includes('text/event-stream')) {
+        // Parse SSE stream
+        const reader = response.body?.getReader()
+        const decoder = new TextDecoder()
+        
+        if (!reader) {
+          throw new Error('No response body reader available')
+        }
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          const chunk = decoder.decode(value, { stream: true })
+          const lines = chunk.split('\n')
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6).trim()
+              if (data === '[DONE]') continue
+              
+              try {
+                const parsed = JSON.parse(data)
+                if (parsed.conversationId) {
+                  nextConvId = parsed.conversationId
+                }
+                if (parsed.content) {
+                  finalContent = parsed.content
+                }
+              } catch (e) {
+                // If not JSON, treat as content
+                if (data && !data.includes('[DONE]')) {
+                  finalContent = data
+                }
+              }
+            }
+          }
+        }
+      } else {
+        // Fallback to JSON parsing if not streaming
+        const data = await response.json()
+        if (data.conversationId) {
+          nextConvId = data.conversationId
+        }
+        if (data.content) {
+          finalContent = data.content
+        } else if (data.message) {
+          finalContent = data.message
+        }
       }
 
-      if (data.parsed && data.raw) {
-        setAssistantMessage({ raw: data.raw, advisor: data.parsed })
-      } else if (typeof data.message === 'string') {
-        setAssistantMessage({ content: data.message, fallback: Boolean(data.fallback) })
+      // Set the assistant message
+      if (finalContent) {
+        // Try to parse as advisor format (has **Key Insights** or similar markdown structure)
+        try {
+          const { parseAdvisorMarkdown } = await import('@/utils/aiResponseValidator')
+          const parsed = parseAdvisorMarkdown(finalContent)
+          if (parsed) {
+            setAssistantMessage({ raw: finalContent, advisor: parsed })
+          } else {
+            // Not in advisor format, use as plain content
+            setAssistantMessage({ content: finalContent })
+          }
+        } catch {
+          // Parsing failed, use as plain content
+          setAssistantMessage({ content: finalContent })
+        }
       } else {
         setAssistantMessage({
           content: "I'm ready when you are—could you restate that so I can help?",
@@ -573,7 +635,7 @@ export default function ChatPage() {
         })
       }
 
-      const nextConvId: string | null = typeof data.conversationId === 'string' ? data.conversationId : conversationId
+      // Update conversationId if received
       if (nextConvId && !conversationId) {
         setConversationId(nextConvId)
         markExistingNavigation()

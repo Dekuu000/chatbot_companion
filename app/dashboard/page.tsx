@@ -35,7 +35,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
-type DashboardTab = "matches" | "resume" | "interview" | "learning" | "activity"
+type DashboardTab = "matches" | "resume" | "interview" | "learning"
 
 interface FocusContext {
   targetRole: string | null
@@ -189,6 +189,50 @@ function formatRelativeTime(value: string) {
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(target)
 }
 
+function parseMarketSnapshot(snapshot: string): JSX.Element {
+  // Remove all ** markdown markers
+  const cleaned = snapshot.replace(/\*\*/g, '')
+  
+  // Split by newlines and parse each line
+  const lines = cleaned.split('\n').filter(line => line.trim())
+  
+  return (
+    <div className="space-y-1.5">
+      {lines.map((line, index) => {
+        // Extract field name and value (format: "Field Name: value")
+        const colonIndex = line.indexOf(':')
+        if (colonIndex === -1) {
+          // No colon found, display as-is
+          return (
+            <div key={index} className="text-text-secondary">
+              {line.trim()}
+            </div>
+          )
+        }
+        
+        const fieldName = line.substring(0, colonIndex).trim()
+        const fieldValue = line.substring(colonIndex + 1).trim()
+        
+        // Map field names to cleaner labels
+        const fieldLabels: Record<string, string> = {
+          'PH Salary Band': 'Salary',
+          'Hiring Hotspots': 'Hiring Hotspots',
+          'Teams hiring now': 'Teams hiring now',
+          'Interview focus': 'Interview focus',
+        }
+        
+        const displayLabel = fieldLabels[fieldName] || fieldName
+        
+        return (
+          <div key={index} className="text-text-secondary">
+            <span className="font-medium text-text-primary">{displayLabel}:</span> {fieldValue}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 function getMatchScore(score?: number | null) {
   if (typeof score !== "number" || Number.isNaN(score)) {
     return 68
@@ -227,7 +271,6 @@ const TAB_OPTIONS: Array<{ id: DashboardTab; label: string; icon: LucideIcon }> 
   { id: "resume", label: "Resume Feedback", icon: FileText },
   { id: "interview", label: "Interview Practice", icon: CalendarCheck },
   { id: "learning", label: "Learning Hub", icon: BookOpen },
-  { id: "activity", label: "Activity", icon: Clock },
 ]
 
 export default function DashboardPage() {
@@ -594,14 +637,9 @@ export default function DashboardPage() {
                   <p className="text-sm font-semibold text-text-primary">
                     {overview.focusContext.targetRole || "Clarify your target role"}
                   </p>
-                  {overview.focusContext.goalSummary && (
-                    <p className="text-xs text-text-secondary leading-relaxed">
-                      {overview.focusContext.goalSummary}
-                    </p>
-                  )}
                   {overview.focusContext.marketSnapshot && (
-                    <div className="mt-2 rounded-xl border border-primary/20 bg-background/90 p-3 text-xs text-text-secondary whitespace-pre-line">
-                      {overview.focusContext.marketSnapshot}
+                    <div className="mt-2 rounded-xl border border-primary/20 bg-background/90 p-3 text-xs text-text-secondary">
+                      {parseMarketSnapshot(overview.focusContext.marketSnapshot)}
                     </div>
                   )}
                 </div>
@@ -1155,49 +1193,12 @@ function renderTabContent(tab: DashboardTab, overview: DashboardOverview | null,
     )
   }
 
-  // Activity tab
+  // Default fallback
   return (
-    <div className="space-y-3">
-      {overview.activity.length === 0 && (
-        <p className="text-sm text-text-secondary">No recent activity logged yet. Generate matches, upload a resume, or start an interview practice.</p>
-      )}
-      {overview.activity.map((activity) => (
-        <div key={activity.id} className="flex items-start gap-3 rounded-xl border border-border/70 bg-card/70 p-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <ActivityIcon type={activity.type} />
-          </div>
-          <div className="flex-1 space-y-1">
-            <p className="text-sm font-semibold text-text-primary">{activity.title}</p>
-            {activity.description && <p className="text-xs text-text-secondary line-clamp-2">{activity.description}</p>}
-            <span className="text-xs text-text-tertiary">{formatRelativeTime(activity.timestamp)}</span>
-          </div>
-          {activity.href && (
-            <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-text-secondary hover:text-text-primary">
-              <Link href={activity.href}>
-                <ArrowUpRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          )}
-        </div>
-      ))}
-    </div>
+    <p className="text-sm text-text-secondary">Select a tab to view content.</p>
   )
 }
 
-function ActivityIcon({ type }: { type: string }) {
-  switch (type) {
-    case "resume":
-      return <FileText className="h-4 w-4" />
-    case "interview":
-      return <CalendarCheck className="h-4 w-4" />
-    case "career":
-      return <Sparkles className="h-4 w-4" />
-    case "learning":
-      return <BookOpen className="h-4 w-4" />
-    default:
-      return <BarChart3 className="h-4 w-4" />
-  }
-}
 
 function AlertChip({ label }: { label: string }) {
   return <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-700">{label}</span>
