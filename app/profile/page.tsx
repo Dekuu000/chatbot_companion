@@ -6,7 +6,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { UserCircle, GraduationCap, Briefcase, Heart, CheckCircle2, ArrowRight, ArrowLeft, X } from 'lucide-react'
+import { UserCircle, GraduationCap, Briefcase, Heart, CheckCircle2, ArrowRight, ArrowLeft, X, Menu } from 'lucide-react'
 import { getSession, type UserSession } from '@/lib/session'
 import Link from 'next/link'
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card'
@@ -15,6 +15,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Stepper } from '@/components/ui/stepper'
+import { useSidebarContext } from '@/components/layout/sidebar-layout'
+import { cn } from '@/lib/utils'
+import { Modal } from '@/components/ui/modal'
 
 type Step = 'education' | 'skills' | 'interests' | 'goals' | 'review'
 
@@ -41,10 +44,21 @@ export default function ProfilePage() {
   const [newInterest, setNewInterest] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-  const [message, setMessage] = useState('')
   const [session, setSession] = useState<UserSession | null>(null)
   const [sessionInitialized, setSessionInitialized] = useState(false)
+  const [showModal, setShowModal] = useState(false)
+  const [modalType, setModalType] = useState<'success' | 'error'>('success')
+  const [modalMessage, setModalMessage] = useState('')
+
+  // Get sidebar context for mobile toggle
+  let sidebarContext = null
+  try {
+    sidebarContext = useSidebarContext()
+  } catch {
+    // Sidebar context not available (e.g., on non-sidebar pages)
+    sidebarContext = null
+  }
+  const { isMobileSidebarOpen, toggleMobileSidebar } = sidebarContext || { isMobileSidebarOpen: false, toggleMobileSidebar: () => {} }
 
   const steps = ['Education', 'Skills', 'Interests', 'Goals', 'Review']
 
@@ -116,8 +130,6 @@ export default function ProfilePage() {
     if (!session) return
 
     setIsSaving(true)
-    setSaveStatus('saving')
-    setMessage('')
 
     try {
       const response = await fetch('/api/profile', {
@@ -136,23 +148,33 @@ export default function ProfilePage() {
         throw new Error('Failed to save')
       }
 
-      setSaveStatus('saved')
-      setMessage('Profile saved successfully!')
-      setTimeout(() => {
-        setSaveStatus('idle')
-        setMessage('')
-      }, 3000)
+      // Show success modal
+      setModalType('success')
+      setModalMessage('Profile saved successfully!')
+      setShowModal(true)
     } catch (error) {
-      setSaveStatus('error')
-      setMessage('Failed to save profile')
+      // Show error modal
+      setModalType('error')
+      setModalMessage('Failed to save profile. Please try again.')
+      setShowModal(true)
     } finally {
       setIsSaving(false)
     }
   }
 
   const addSkill = () => {
-    if (newSkill.trim() && !profile.skills.includes(newSkill.trim())) {
-      setProfile({ ...profile, skills: [...profile.skills, newSkill.trim()] })
+    const trimmedInput = newSkill.trim()
+    if (!trimmedInput) return
+
+    // Split by comma and process each skill
+    const skillsToAdd = trimmedInput
+      .split(',')
+      .map(skill => skill.trim())
+      .filter(skill => skill.length > 0)
+      .filter(skill => !profile.skills.includes(skill)) // Remove duplicates
+
+    if (skillsToAdd.length > 0) {
+      setProfile({ ...profile, skills: [...profile.skills, ...skillsToAdd] })
       setNewSkill('')
     }
   }
@@ -162,10 +184,20 @@ export default function ProfilePage() {
   }
 
   const addInterest = () => {
-    if (newInterest.trim() && !profile.interests.includes(newInterest.trim())) {
+    const trimmedInput = newInterest.trim()
+    if (!trimmedInput) return
+
+    // Split by comma and process each interest
+    const interestsToAdd = trimmedInput
+      .split(',')
+      .map(interest => interest.trim())
+      .filter(interest => interest.length > 0)
+      .filter(interest => !profile.interests.includes(interest)) // Remove duplicates
+
+    if (interestsToAdd.length > 0) {
       setProfile({
         ...profile,
-        interests: [...profile.interests, newInterest.trim()],
+        interests: [...profile.interests, ...interestsToAdd],
       })
       setNewInterest('')
     }
@@ -240,6 +272,35 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8 px-4 sm:px-6">
+        {/* Mobile Menu Toggle */}
+        {sidebarContext && (
+          <div className="flex items-center gap-2 sm:gap-3 mb-4 md:hidden">
+            <Button
+              data-mobile-menu-button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "flex-shrink-0",
+                "h-9 w-9 rounded-xl",
+                "bg-bg-surface/95 backdrop-blur-sm border border-border/60",
+                "shadow-sm hover:shadow-md",
+                "hover:bg-muted/80 hover:border-border",
+                "active:scale-95",
+                "transition-all duration-200",
+                "text-text-primary"
+              )}
+              onClick={toggleMobileSidebar}
+              aria-label="Toggle sidebar"
+            >
+              {isMobileSidebarOpen ? (
+                <X className="h-4 w-4 transition-transform duration-200" />
+              ) : (
+                <Menu className="h-4 w-4 transition-transform duration-200" />
+              )}
+            </Button>
+          </div>
+        )}
+
         {/* Header */}
         <div className="text-center space-y-2">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-text-primary flex items-center justify-center flex-wrap gap-2">
@@ -255,40 +316,6 @@ export default function ProfilePage() {
         <div className="mb-8">
           <Stepper steps={steps} currentStep={getStepIndex(currentStep)} />
         </div>
-
-        {/* Save Status */}
-        {message && (
-          <div className={`mb-6 p-4 rounded-2xl ${
-                saveStatus === 'saved'
-                  ? 'bg-accent-50 border border-accent-200'
-                  : 'bg-red-50 border border-red-200'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  {saveStatus === 'saved' ? (
-                    <CheckCircle2 className="h-5 w-5 text-accent mr-2" />
-                  ) : (
-                    <X className="h-5 w-5 text-red-500 mr-2" />
-                  )}
-                  <p
-                    className={
-                      saveStatus === 'saved' ? 'text-accent-800' : 'text-red-800'
-                    }
-                  >
-                    {message}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setMessage('')}
-                  className="text-gray-400 hover:text-gray-600"
-                  aria-label="Dismiss message"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-          )}
 
         {/* Step Content */}
         <div key={currentStep}>
@@ -394,7 +421,7 @@ export default function ProfilePage() {
                       )}
 
                       {/* Add Skill Input */}
-                      <div className="space-y-2">
+                      <div className="flex items-center gap-2">
                         <Input
                           value={newSkill}
                           onChange={(e) => setNewSkill(e.target.value)}
@@ -404,7 +431,8 @@ export default function ProfilePage() {
                               addSkill()
                             }
                           }}
-                          placeholder="e.g., Python, Communication, Project Management"
+                          placeholder="e.g., Python, JavaScript, React (separate multiple skills with commas)"
+                          className="flex-1"
                         />
                         <Button type="button" onClick={addSkill} variant="outline" size="sm">
                           <ArrowRight className="h-4 w-4 mr-2" />
@@ -455,7 +483,7 @@ export default function ProfilePage() {
                       )}
 
                       {/* Add Interest Input */}
-                      <div className="space-y-2">
+                      <div className="flex items-center gap-2">
                         <Input
                           value={newInterest}
                           onChange={(e) => setNewInterest(e.target.value)}
@@ -465,7 +493,8 @@ export default function ProfilePage() {
                               addInterest()
                             }
                           }}
-                          placeholder="e.g., Software Development, Data Science, Design"
+                          placeholder="e.g., Software Development, Data Science, Design (separate multiple interests with commas)"
+                          className="flex-1"
                         />
                         <Button type="button" onClick={addInterest} variant="outline" size="sm">
                           <ArrowRight className="h-4 w-4 mr-2" />
@@ -606,16 +635,10 @@ export default function ProfilePage() {
             </Button>
 
           <div className="flex items-center gap-4">
-            {saveStatus === 'saving' && (
+            {isSaving && (
               <div className="flex items-center text-gray-600">
                 <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2" />
                 <span className="text-sm">Saving...</span>
-              </div>
-            )}
-            {saveStatus === 'saved' && (
-              <div className="flex items-center text-accent">
-                <CheckCircle2 className="h-5 w-5 mr-2" />
-                <span className="text-sm">Saved!</span>
               </div>
             )}
 
@@ -649,6 +672,17 @@ export default function ProfilePage() {
             </Button>
           </div>
         )}
+
+        {/* Modal for Save Notifications */}
+        <Modal
+          open={showModal}
+          onClose={() => setShowModal(false)}
+          title={modalType === 'success' ? 'Success' : 'Error'}
+          message={modalMessage}
+          type={modalType}
+          autoClose={modalType === 'success'}
+          autoCloseDelay={3000}
+        />
     </div>
   )
 }
